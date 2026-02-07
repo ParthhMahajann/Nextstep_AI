@@ -15,6 +15,13 @@ from .views import (
     SavedJobViewSet,
 )
 
+from .ai_views import (
+    GenerateEmailView,
+    AnalyzeResumeView,
+    GenerateCoverLetterView,
+    ApplicationTipsView,
+)
+
 # Create router for viewsets
 router = DefaultRouter()
 router.register(r'skills', SkillViewSet, basename='skill')
@@ -31,6 +38,12 @@ urlpatterns = [
     
     # Profile endpoint
     path('profile/', ProfileView.as_view(), name='profile'),
+    
+    # AI endpoints
+    path('ai/generate-email/', GenerateEmailView.as_view(), name='generate_email'),
+    path('ai/analyze-resume/', AnalyzeResumeView.as_view(), name='analyze_resume'),
+    path('ai/cover-letter/', GenerateCoverLetterView.as_view(), name='cover_letter'),
+    path('ai/application-tips/', ApplicationTipsView.as_view(), name='application_tips'),
     
     # Router URLs (jobs, skills, saved-jobs, user-skills)
     path('', include(router.urls)),
