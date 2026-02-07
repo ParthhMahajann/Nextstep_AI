@@ -117,39 +117,44 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
     
     @action(detail=False, methods=['get'])
     def recommended(self, request):
-        """Get AI-recommended jobs based on user profile."""
-        # Placeholder for ML ranking - will be implemented in Phase 2
+        """Get AI-recommended jobs based on user profile and skills."""
+        from .matching import get_matching_service
+        
         user_profile = request.user.profile
+        matching_service = get_matching_service()
         
-        # For now, return jobs filtered by user preferences
-        jobs = self.get_queryset()
+        # Get ML-ranked jobs
+        ranked_jobs = matching_service.get_recommended_jobs(
+            user_profile=user_profile,
+            queryset=self.get_queryset(),
+            limit=50
+        )
         
-        # Filter by preferred job types if set
-        if user_profile.preferred_job_types:
-            jobs = jobs.filter(job_type__in=user_profile.preferred_job_types)
+        # Return with match scores
+        return Response({
+            'count': len(ranked_jobs),
+            'results': ranked_jobs
+        })
+    
+    @action(detail=True, methods=['get'])
+    def match_score(self, request, pk=None):
+        """Get detailed match score for a specific job."""
+        from .matching import get_matching_service
         
-        # Filter by preferred locations if set
-        if user_profile.preferred_locations:
-            location_q = Q()
-            for loc in user_profile.preferred_locations:
-                location_q |= Q(location__icontains=loc)
-            jobs = jobs.filter(location_q)
+        job = self.get_object()
+        user_profile = request.user.profile
+        matching_service = get_matching_service()
         
-        # Get user skills for basic matching
-        user_skills = user_profile.skills.values_list('skill__name', flat=True)
-        if user_skills:
-            skill_q = Q()
-            for skill in user_skills:
-                skill_q |= Q(description__icontains=skill) | Q(title__icontains=skill)
-            jobs = jobs.filter(skill_q)
+        match_info = matching_service.compute_job_match(
+            user_profile=user_profile,
+            job=job
+        )
         
-        page = self.paginate_queryset(jobs[:50])
-        if page is not None:
-            serializer = JobListSerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        
-        serializer = JobListSerializer(jobs[:50], many=True)
-        return Response(serializer.data)
+        return Response({
+            'job_id': job.id,
+            'job_title': job.title,
+            **match_info
+        })
 
 
 # ==================== Saved Job Views ====================
