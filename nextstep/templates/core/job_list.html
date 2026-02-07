@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NextStep AI – Opportunities</title>
+    <style>
+        body { font-family: Arial; margin: 40px; }
+        .job { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; }
+        .company { color: #555; }
+        .apply { margin-top: 10px; display: inline-block; }
+    </style>
+</head>
+<body>
+
+<h1>NextStep AI – Internship Opportunities</h1>
+
+{% for job in jobs %}
+    <div class="job">
+        <h3>{{ job.title }}</h3>
+        <div class="company">{{ job.company }} • {{ job.location }}</div>
+        <p>{{ job.description|truncatewords:40 }}</p>
+        <a class="apply" href="{{ job.apply_link }}" target="_blank">
+            View Opportunity →
+        </a>
+    </div>
+{% empty %}
+    <p>No opportunities found.</p>
+{% endfor %}
+
+</body>
+</html>
