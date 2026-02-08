@@ -9,8 +9,12 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Callable
 from datetime import datetime
+
+import requests
+
+from retry_decorator import with_retry, RetryConfig, RETRYABLE_EXCEPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -39,18 +43,34 @@ class BaseScraper(ABC):
     Optional overrides:
         - is_duplicate(opportunity): Check for existing entries
         - save_opportunity(opportunity): Custom save logic
+    
+    Features:
+        - Built-in retry logic with exponential backoff
+        - Rate limiting between requests
+        - Automatic request helpers
     """
     
     # Default configuration
     source_name: str = "unknown"
     rate_limit_delay: float = 1.0  # seconds between requests
     max_retries: int = 3
+    retry_base_delay: float = 1.0  # initial retry delay
+    retry_max_delay: float = 60.0  # max retry delay
     
     def __init__(self):
         self.headers = {
             "User-Agent": "NextStepAI/0.1 (Educational Project)"
         }
         self._last_request_time = 0
+        self._retry_count = 0
+        self._request_count = 0
+        
+        # Initialize retry configuration
+        self.retry_config = RetryConfig(
+            max_retries=self.max_retries,
+            base_delay=self.retry_base_delay,
+            max_delay=self.retry_max_delay,
+        )
     
     def _respect_rate_limit(self):
         """Ensure we don't exceed rate limits."""
@@ -58,6 +78,62 @@ class BaseScraper(ABC):
         if elapsed < self.rate_limit_delay:
             time.sleep(self.rate_limit_delay - elapsed)
         self._last_request_time = time.time()
+    
+    def _make_request(
+        self,
+        url: str,
+        method: str = "GET",
+        params: dict = None,
+        data: dict = None,
+        json: dict = None,
+        timeout: int = 15,
+        **kwargs
+    ) -> requests.Response:
+        """
+        Make an HTTP request with automatic retry and rate limiting.
+        
+        Args:
+            url: Request URL
+            method: HTTP method (GET, POST, etc.)
+            params: Query parameters
+            data: Form data
+            json: JSON body
+            timeout: Request timeout in seconds
+            **kwargs: Additional requests arguments
+        
+        Returns:
+            requests.Response object
+        
+        Raises:
+            requests.RequestException on failure after all retries
+        """
+        self._respect_rate_limit()
+        self._request_count += 1
+        
+        @with_retry(
+            max_retries=self.max_retries,
+            base_delay=self.retry_base_delay,
+            max_delay=self.retry_max_delay,
+        )
+        def _execute_request():
+            response = requests.request(
+                method=method,
+                url=url,
+                params=params,
+                data=data,
+                json=json,
+                headers=kwargs.pop('headers', self.headers),
+                timeout=timeout,
+                **kwargs
+            )
+            response.raise_for_status()
+            return response
+        
+        try:
+            return _execute_request()
+        except RETRYABLE_EXCEPTIONS as e:
+            self._retry_count += 1
+            raise
     
     @abstractmethod
     def fetch_opportunities(self) -> List[OpportunityData]:
@@ -108,13 +184,19 @@ class BaseScraper(ABC):
         Execute the scraping process.
         
         Returns:
-            Dict with statistics: {fetched, saved, duplicates, errors}
+            Dict with statistics: {fetched, saved, duplicates, errors, retries, requests}
         """
+        # Reset counters
+        self._retry_count = 0
+        self._request_count = 0
+        
         stats = {
             "fetched": 0,
             "saved": 0,
             "duplicates": 0,
             "errors": 0,
+            "retries": 0,
+            "requests": 0,
             "source": self.source_name,
             "timestamp": datetime.now().isoformat()
         }
@@ -138,9 +220,14 @@ class BaseScraper(ABC):
             logger.error(f"Error fetching opportunities from {self.source_name}: {e}")
             stats["errors"] += 1
         
+        # Add retry and request stats
+        stats["retries"] = self._retry_count
+        stats["requests"] = self._request_count
+        
         logger.info(
             f"Scraper {self.source_name} completed: "
             f"fetched={stats['fetched']}, saved={stats['saved']}, "
-            f"duplicates={stats['duplicates']}, errors={stats['errors']}"
+            f"duplicates={stats['duplicates']}, errors={stats['errors']}, "
+            f"retries={stats['retries']}"
         )
         return stats
