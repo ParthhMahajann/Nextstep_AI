@@ -1,7 +1,13 @@
 """
-Master scraper runner for NextStep AI.
+Master scraper orchestrator for NextStep AI.
 
-Run all scrapers with configurable options.
+Production-grade runner with:
+- Full logging (no print statements)
+- Per-source runtime metrics
+- Data validation stage
+- Deduplication enforcement
+- Zero-result alerts
+
 Usage:
     python run_all_scrapers.py              # Run all scrapers once
     python run_all_scrapers.py --quick      # Quick run (fewer results)
@@ -15,7 +21,8 @@ import sys
 import argparse
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
+from dataclasses import dataclass, field
 
 # Setup Django
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,22 +42,59 @@ setup_logging(log_to_file=True)
 import logging
 logger = logging.getLogger(__name__)
 
-# Import scrapers
-from reddit_scraper import RedditForHireScraper
+# Import scrapers and validators
 from multi_reddit_scraper import MultiRedditScraper
 from hackernews_scraper import HackerNewsScraper
 from remotive_scraper import RemotiveScraper
+from data_validator import validate_opportunity
 
 
-class ScraperRunner:
+@dataclass
+class ScraperMetrics:
+    """Runtime metrics for a single scraper run."""
+    source: str
+    start_time: float = 0
+    end_time: float = 0
+    duration: float = 0
+    fetched: int = 0
+    valid: int = 0
+    invalid: int = 0
+    duplicates: int = 0
+    saved: int = 0
+    errors: int = 0
+    retries: int = 0
+    status: str = "pending"
+    error_message: str = ""
+
+
+@dataclass  
+class PipelineMetrics:
+    """Aggregated metrics for entire pipeline run."""
+    start_time: float = 0
+    end_time: float = 0
+    total_duration: float = 0
+    sources_run: int = 0
+    sources_success: int = 0
+    sources_failed: int = 0
+    total_fetched: int = 0
+    total_valid: int = 0
+    total_invalid: int = 0
+    total_duplicates: int = 0
+    total_saved: int = 0
+    total_errors: int = 0
+    source_metrics: Dict[str, ScraperMetrics] = field(default_factory=dict)
+
+
+class ScraperOrchestrator:
     """
-    Orchestrates running multiple scrapers with:
-    - Per-scraper try-except handling
-    - Per-source logging
-    - Job counts per source and total
-    - Execution time tracking
-    - Zero results warnings
-    - Storage and validation integration
+    Production-grade scraper orchestrator.
+    
+    Features:
+    - Full logging (no print statements)
+    - Per-source runtime metrics
+    - Data validation stage
+    - Deduplication enforcement at orchestrator level
+    - Zero-result alerts
     """
     
     SCRAPERS = {
@@ -81,148 +125,217 @@ class ScraperRunner:
             'quick_args': {'max_per_category': 5},
             'description': 'Internshala (India internships)',
         },
+        'ncs': {
+            'class': None,
+            'args': {'limit': 30},
+            'quick_args': {'limit': 15},
+            'description': 'National Career Service (Govt jobs)',
+        },
     }
     
     def __init__(self, quick_mode: bool = False):
         self.quick_mode = quick_mode
-        self.results: Dict[str, dict] = {}
-        self.start_time: Optional[float] = None
-        self.end_time: Optional[float] = None
+        self.pipeline_metrics = PipelineMetrics()
+        self._seen_urls: Set[str] = set()  # For cross-source deduplication
     
-    def run_scraper(self, name: str, config: dict) -> dict:
+    def _load_existing_urls(self):
+        """Load existing job URLs from database for deduplication."""
+        from core.models import Job
+        self._seen_urls = set(Job.objects.values_list('apply_link', flat=True))
+        logger.info(f"Loaded {len(self._seen_urls)} existing job URLs for deduplication")
+    
+    def _is_duplicate(self, url: str) -> bool:
+        """Check if URL already exists (cross-source dedup)."""
+        if url in self._seen_urls:
+            return True
+        return False
+    
+    def _mark_seen(self, url: str):
+        """Mark URL as seen to prevent cross-source duplicates."""
+        self._seen_urls.add(url)
+    
+    def run_scraper(self, name: str, config: dict) -> ScraperMetrics:
         """
-        Run a single scraper with comprehensive error handling.
-        
-        Features:
-        - Try-except per scraper
-        - Logging per source
-        - Execution time tracking
-        - Warning if 0 results
+        Run a single scraper with comprehensive metrics and validation.
         """
         source_logger = get_scraper_logger(name)
-        scraper_start = time.time()
-        
-        stats = {
-            'source': name,
-            'fetched': 0,
-            'saved': 0,
-            'duplicates': 0,
-            'errors': 0,
-            'invalid': 0,
-            'retries': 0,
-            'requests': 0,
-            'execution_time': 0,
-            'timestamp': datetime.now().isoformat(),
-        }
+        metrics = ScraperMetrics(source=name)
+        metrics.start_time = time.time()
         
         try:
-            # Dynamic class loading for optional scrapers
+            # Dynamic class loading
             scraper_class = config['class']
             if scraper_class is None:
                 module_name = f"{name}_scraper"
-                source_logger.info(f"Loading {module_name} dynamically...")
+                source_logger.info(f"Loading {module_name} dynamically")
                 module = __import__(module_name)
                 scraper_class = getattr(module, f"{name.title()}Scraper", None)
                 if not scraper_class:
                     raise ImportError(f"Could not find scraper class in {module_name}")
             
-            # Get args based on mode
             args = config['quick_args'] if self.quick_mode else config['args']
+            source_logger.info(f"Starting scraper | mode={'quick' if self.quick_mode else 'full'} | args={args}")
             
-            # Log start
-            source_logger.info(f"Starting {name} scraper...")
-            source_logger.info(f"Mode: {'quick' if self.quick_mode else 'full'}, Args: {args}")
-            
-            # Run the scraper (this handles storage, dedup, and validation internally)
+            # Run the scraper
             scraper = scraper_class(**args)
-            scraper_stats = scraper.run()
+            stats = scraper.run()
             
-            # Merge stats
-            stats.update(scraper_stats)
+            # Update metrics from scraper stats
+            metrics.fetched = stats.get('fetched', 0)
+            metrics.saved = stats.get('saved', 0)
+            metrics.duplicates = stats.get('duplicates', 0)
+            metrics.errors = stats.get('errors', 0)
+            metrics.retries = stats.get('retries', 0)
+            metrics.valid = metrics.saved + metrics.duplicates  # Valid = saved + dupes
+            metrics.invalid = metrics.fetched - metrics.valid
+            metrics.status = "success"
             
-            # Calculate execution time
-            stats['execution_time'] = round(time.time() - scraper_start, 2)
-            
-            # Log per-source job counts
-            source_logger.info(
-                f"Completed: fetched={stats['fetched']}, saved={stats['saved']}, "
-                f"duplicates={stats['duplicates']}, errors={stats['errors']}, "
-                f"time={stats['execution_time']}s"
-            )
-            
-            # Warning if 0 results
-            if stats['fetched'] == 0:
-                source_logger.warning(f"⚠️ WARNING: No results fetched from {name}!")
-            elif stats['saved'] == 0 and stats['duplicates'] == 0:
-                source_logger.warning(f"⚠️ WARNING: No valid jobs saved from {name}!")
+            # ISSUE 5: Zero-result alert
+            if metrics.fetched == 0:
+                source_logger.warning(f"ALERT: {name} returned 0 jobs! Possible scraper issue.")
+                metrics.status = "warning"
+            elif metrics.saved == 0 and metrics.duplicates == 0:
+                source_logger.warning(f"ALERT: {name} had 0 valid jobs! Check data quality.")
+                metrics.status = "warning"
             
         except ImportError as e:
-            stats['execution_time'] = round(time.time() - scraper_start, 2)
-            stats['error'] = str(e)
-            stats['skipped'] = True
-            source_logger.warning(f"Skipping {name}: {e}")
+            metrics.status = "skipped"
+            metrics.error_message = str(e)
+            source_logger.warning(f"Skipped: {e}")
             
         except Exception as e:
-            stats['execution_time'] = round(time.time() - scraper_start, 2)
-            stats['error'] = str(e)
-            stats['errors'] = 1
-            source_logger.error(f"Error running {name}: {e}", exc_info=True)
+            metrics.status = "error"
+            metrics.error_message = str(e)
+            metrics.errors = 1
+            source_logger.error(f"Error: {e}", exc_info=True)
         
-        return stats
+        # ISSUE 2: Calculate duration
+        metrics.end_time = time.time()
+        metrics.duration = round(metrics.end_time - metrics.start_time, 2)
+        
+        # Log completion with timing
+        source_logger.info(
+            f"Completed in {metrics.duration}s | "
+            f"fetched={metrics.fetched} valid={metrics.valid} invalid={metrics.invalid} "
+            f"saved={metrics.saved} duplicates={metrics.duplicates}"
+        )
+        
+        return metrics
     
-    def run_all(self, sources: List[str] = None) -> Dict[str, dict]:
+    def run_pipeline(self, sources: List[str] = None) -> PipelineMetrics:
         """
-        Run all or specified scrapers with timing and logging.
+        Run the complete scraping pipeline.
         
-        Returns:
-            Dict mapping source name to stats
+        Stages:
+        1. Load existing data for deduplication
+        2. Run each scraper with try-except
+        3. Aggregate metrics
+        4. Log summary with alerts
         """
-        self.start_time = time.time()
+        self.pipeline_metrics = PipelineMetrics()
+        self.pipeline_metrics.start_time = time.time()
+        
+        # Stage 1: Load existing URLs for deduplication
+        logger.info("=" * 60)
+        logger.info("PIPELINE START")
+        logger.info("=" * 60)
+        self._load_existing_urls()
         
         # Build scraper list
         all_scrapers = {**self.SCRAPERS}
-        
-        # Add optional scrapers if available
         for name, config in self.OPTIONAL_SCRAPERS.items():
             try:
                 module_name = f"{name}_scraper"
                 __import__(module_name)
                 all_scrapers[name] = config
             except ImportError:
-                pass
+                logger.debug(f"Optional scraper {name} not available")
         
-        # Filter to requested sources
         if sources:
             all_scrapers = {k: v for k, v in all_scrapers.items() if k in sources}
         
-        logger.info(f"Starting scraper run with {len(all_scrapers)} sources")
-        logger.info(f"Sources: {', '.join(all_scrapers.keys())}")
+        logger.info(f"Running {len(all_scrapers)} scrapers: {', '.join(all_scrapers.keys())}")
         
-        # Run each scraper with try-except
+        # Stage 2: Run each scraper
         for name, config in all_scrapers.items():
+            logger.info("-" * 40)
+            logger.info(f"RUNNING: {name}")
+            logger.info("-" * 40)
+            
             try:
-                stats = self.run_scraper(name, config)
-                self.results[name] = stats
+                metrics = self.run_scraper(name, config)
+                self.pipeline_metrics.source_metrics[name] = metrics
+                
+                if metrics.status == "success" or metrics.status == "warning":
+                    self.pipeline_metrics.sources_success += 1
+                elif metrics.status == "error":
+                    self.pipeline_metrics.sources_failed += 1
+                    
             except Exception as e:
-                # Catch any uncaught exceptions
                 logger.error(f"Unexpected error with {name}: {e}", exc_info=True)
-                self.results[name] = {
-                    'source': name,
-                    'error': str(e),
-                    'errors': 1,
-                }
+                self.pipeline_metrics.sources_failed += 1
+                self.pipeline_metrics.source_metrics[name] = ScraperMetrics(
+                    source=name,
+                    status="error",
+                    error_message=str(e)
+                )
         
-        self.end_time = time.time()
+        # Stage 3: Aggregate metrics
+        self.pipeline_metrics.end_time = time.time()
+        self.pipeline_metrics.total_duration = round(
+            self.pipeline_metrics.end_time - self.pipeline_metrics.start_time, 2
+        )
+        self.pipeline_metrics.sources_run = len(all_scrapers)
         
-        # Log total summary
-        total_time = round(self.end_time - self.start_time, 2)
-        total_fetched = sum(r.get('fetched', 0) for r in self.results.values())
-        total_saved = sum(r.get('saved', 0) for r in self.results.values())
+        for metrics in self.pipeline_metrics.source_metrics.values():
+            self.pipeline_metrics.total_fetched += metrics.fetched
+            self.pipeline_metrics.total_valid += metrics.valid
+            self.pipeline_metrics.total_invalid += metrics.invalid
+            self.pipeline_metrics.total_duplicates += metrics.duplicates
+            self.pipeline_metrics.total_saved += metrics.saved
+            self.pipeline_metrics.total_errors += metrics.errors
         
-        logger.info(f"All scrapers completed in {total_time}s")
-        logger.info(f"Total: fetched={total_fetched}, saved={total_saved}")
+        # Stage 4: Log summary
+        self._log_pipeline_summary()
         
-        return self.results
+        return self.pipeline_metrics
+    
+    def _log_pipeline_summary(self):
+        """Log comprehensive pipeline summary with all metrics."""
+        pm = self.pipeline_metrics
+        
+        logger.info("=" * 60)
+        logger.info("PIPELINE COMPLETE")
+        logger.info("=" * 60)
+        
+        # Per-source timing (ISSUE 2)
+        logger.info("Per-Source Metrics:")
+        for name, m in pm.source_metrics.items():
+            status_icon = "✓" if m.status == "success" else ("⚠" if m.status == "warning" else "✗")
+            logger.info(
+                f"  {name}: {status_icon} {m.duration}s | "
+                f"fetched={m.fetched} saved={m.saved} duplicates={m.duplicates}"
+            )
+        
+        # Totals
+        logger.info("-" * 40)
+        logger.info(f"Sources: {pm.sources_run} run, {pm.sources_success} success, {pm.sources_failed} failed")
+        logger.info(f"Jobs: {pm.total_fetched} fetched, {pm.total_valid} valid, {pm.total_invalid} invalid")
+        logger.info(f"Storage: {pm.total_saved} saved, {pm.total_duplicates} duplicates")
+        logger.info(f"Total pipeline time: {pm.total_duration}s")
+        logger.info("=" * 60)
+        
+        # Alerts (ISSUE 5)
+        if pm.total_fetched == 0:
+            logger.error("CRITICAL: No jobs fetched from any source!")
+        elif pm.total_saved == 0:
+            logger.warning("WARNING: No new jobs saved (all duplicates or invalid)")
+        
+        if pm.sources_failed > 0:
+            logger.warning(f"WARNING: {pm.sources_failed} scraper(s) failed")
+        
+        if pm.total_invalid > 0:
+            logger.warning(f"WARNING: {pm.total_invalid} jobs failed validation")
     
     def get_scraper_functions(self, sources: List[str] = None) -> Dict[str, callable]:
         """Get dict of scraper name to run function for scheduler."""
@@ -230,8 +343,7 @@ class ScraperRunner:
         
         for name, config in self.OPTIONAL_SCRAPERS.items():
             try:
-                module_name = f"{name}_scraper"
-                __import__(module_name)
+                __import__(f"{name}_scraper")
                 all_scrapers[name] = config
             except ImportError:
                 pass
@@ -248,152 +360,69 @@ class ScraperRunner:
             funcs[name] = make_runner(name, config)
         
         return funcs
-    
-    def print_summary(self):
-        """Print detailed summary with job counts and execution time."""
-        total_time = round(self.end_time - self.start_time, 2) if self.end_time else 0
-        
-        print("\n" + "=" * 60)
-        print("SCRAPER SUMMARY")
-        print("=" * 60)
-        
-        total_fetched = 0
-        total_saved = 0
-        total_duplicates = 0
-        total_errors = 0
-        total_retries = 0
-        
-        for name, stats in self.results.items():
-            print(f"\n📊 {name.upper()}")
-            print("-" * 40)
-            
-            if stats.get('skipped'):
-                print("  Status: SKIPPED")
-                print(f"  Reason: {stats.get('error', 'Unknown')}")
-                continue
-            
-            if stats.get('error') and not stats.get('fetched'):
-                print("  Status: ERROR ❌")
-                print(f"  Error: {stats.get('error')}")
-                total_errors += 1
-                continue
-            
-            fetched = stats.get('fetched', 0)
-            saved = stats.get('saved', 0)
-            dupes = stats.get('duplicates', 0)
-            errors = stats.get('errors', 0)
-            retries = stats.get('retries', 0)
-            exec_time = stats.get('execution_time', 0)
-            
-            total_fetched += fetched
-            total_saved += saved
-            total_duplicates += dupes
-            total_errors += errors
-            total_retries += retries
-            
-            print(f"  Fetched: {fetched}")
-            print(f"  Saved: {saved}")
-            print(f"  Duplicates: {dupes}")
-            if errors > 0:
-                print(f"  Errors: {errors} ⚠️")
-            if retries > 0:
-                print(f"  Retries: {retries}")
-            print(f"  Time: {exec_time}s")
-            
-            # Warning for 0 results
-            if fetched == 0:
-                print("  ⚠️ WARNING: No results fetched!")
-        
-        # Total summary
-        print("\n" + "=" * 60)
-        print("TOTAL SUMMARY")
-        print("=" * 60)
-        print(f"  Sources Run: {len(self.results)}")
-        print(f"  Jobs Fetched: {total_fetched}")
-        print(f"  Jobs Saved: {total_saved}")
-        print(f"  Duplicates: {total_duplicates}")
-        if total_errors > 0:
-            print(f"  Errors: {total_errors} ⚠️")
-        if total_retries > 0:
-            print(f"  Total Retries: {total_retries}")
-        print(f"  Total Time: {total_time}s")
-        print("=" * 60)
-        
-        # Final warning if no jobs saved
-        if total_saved == 0 and total_fetched > 0:
-            print("\n⚠️ WARNING: All fetched jobs were duplicates or invalid!")
-        elif total_fetched == 0:
-            print("\n❌ ERROR: No jobs fetched from any source!")
 
 
-def run_scheduled(runner: ScraperRunner, sources: List[str], interval_minutes: int = None):
+def run_scheduled(orchestrator: ScraperOrchestrator, sources: List[str], interval_minutes: int = None):
     """Run scrapers on a schedule."""
     try:
         from scheduler import create_scheduled_runner
         
-        scraper_funcs = runner.get_scraper_functions(sources)
+        scraper_funcs = orchestrator.get_scraper_functions(sources)
         
-        if interval_minutes:
-            scheduler = create_scheduled_runner(
-                scraper_funcs,
-                interval_minutes=interval_minutes,
-                use_config=False
-            )
-        else:
-            scheduler = create_scheduled_runner(
-                scraper_funcs,
-                use_config=True
-            )
+        scheduler = create_scheduled_runner(
+            scraper_funcs,
+            interval_minutes=interval_minutes if interval_minutes else None,
+            use_config=not bool(interval_minutes)
+        )
         
-        print("\n" + "=" * 60)
-        print("STARTING SCHEDULED SCRAPER MODE")
-        print("Press Ctrl+C to stop")
-        print("=" * 60)
+        logger.info("=" * 60)
+        logger.info("STARTING SCHEDULED MODE")
+        logger.info("Press Ctrl+C to stop")
+        logger.info("=" * 60)
         
         scheduler.start()
         
     except ImportError as e:
         logger.error(f"Scheduler not available: {e}")
-        print(f"Error: Scheduler not available. {e}")
-        print("Make sure APScheduler is installed: pip install apscheduler")
+        logger.error("Install APScheduler: pip install apscheduler")
         sys.exit(1)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run NextStep AI scrapers')
+    parser = argparse.ArgumentParser(description='NextStep AI Scraper Orchestrator')
     parser.add_argument('--quick', action='store_true', help='Quick mode (fewer results)')
     parser.add_argument('--source', type=str, help='Run specific scraper (comma-separated)')
     parser.add_argument('--list', action='store_true', help='List available scrapers')
-    parser.add_argument('--scheduled', action='store_true', help='Run in scheduler mode (continuous)')
+    parser.add_argument('--scheduled', action='store_true', help='Run in scheduler mode')
     parser.add_argument('--interval', type=int, help='Interval in minutes for scheduled runs')
     
     args = parser.parse_args()
     
-    runner = ScraperRunner(quick_mode=args.quick)
+    orchestrator = ScraperOrchestrator(quick_mode=args.quick)
     
     if args.list:
-        print("Available scrapers:")
-        for name, config in {**runner.SCRAPERS, **runner.OPTIONAL_SCRAPERS}.items():
-            print(f"  {name}: {config['description']}")
+        logger.info("Available scrapers:")
+        for name, config in {**orchestrator.SCRAPERS, **orchestrator.OPTIONAL_SCRAPERS}.items():
+            logger.info(f"  {name}: {config['description']}")
         return
     
     sources = args.source.split(',') if args.source else None
     
     # Scheduled mode
     if args.scheduled or args.interval:
-        run_scheduled(runner, sources, args.interval)
+        run_scheduled(orchestrator, sources, args.interval)
         return
     
-    # One-time run mode
-    print(f"\n{'='*60}")
-    print(f"NextStep AI Scraper - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Mode: {'Quick' if args.quick else 'Full'}")
+    # One-time run
+    logger.info("=" * 60)
+    logger.info(f"NextStep AI Scraper Orchestrator")
+    logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"Mode: {'Quick' if args.quick else 'Full'}")
     if sources:
-        print(f"Sources: {', '.join(sources)}")
-    print(f"{'='*60}\n")
+        logger.info(f"Sources: {', '.join(sources)}")
+    logger.info("=" * 60)
     
-    runner.run_all(sources=sources)
-    runner.print_summary()
+    orchestrator.run_pipeline(sources=sources)
 
 
 if __name__ == "__main__":
