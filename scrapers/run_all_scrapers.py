@@ -28,6 +28,10 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nextstep.settings")
 import django
 django.setup()
 
+# Setup logging
+from logging_config import setup_logging
+setup_logging(log_to_file=True)
+
 # Import scrapers
 from reddit_scraper import RedditForHireScraper
 from multi_reddit_scraper import MultiRedditScraper

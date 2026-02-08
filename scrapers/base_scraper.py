@@ -15,6 +15,9 @@ from datetime import datetime
 import requests
 
 from retry_decorator import with_retry, RetryConfig, RETRYABLE_EXCEPTIONS
+from rate_limiter import RateLimiter, get_rate_limiter
+from logging_config import get_scraper_logger, log_request
+from data_validator import validate_opportunity, ValidationResult
 
 logger = logging.getLogger(__name__)
 
@@ -71,13 +74,16 @@ class BaseScraper(ABC):
             base_delay=self.retry_base_delay,
             max_delay=self.retry_max_delay,
         )
+        
+        # Initialize rate limiter for this source
+        self._rate_limiter = get_rate_limiter(self.source_name)
+        self._logger = get_scraper_logger(self.source_name)
     
     def _respect_rate_limit(self):
-        """Ensure we don't exceed rate limits."""
-        elapsed = time.time() - self._last_request_time
-        if elapsed < self.rate_limit_delay:
-            time.sleep(self.rate_limit_delay - elapsed)
-        self._last_request_time = time.time()
+        """Ensure we don't exceed rate limits using enhanced rate limiter."""
+        wait_time = self._rate_limiter.wait()
+        if wait_time > 0:
+            self._logger.debug(f"Rate limited, waited {wait_time:.2f}s")
     
     def _make_request(
         self,
@@ -156,24 +162,45 @@ class BaseScraper(ABC):
     
     def save_opportunity(self, opportunity: OpportunityData) -> Optional[object]:
         """
-        Save opportunity to database.
+        Save opportunity to database after validation.
         
         Returns:
-            Saved Job object or None if skipped
+            Saved Job object or None if skipped/invalid
         """
         from core.models import Job
         
+        # Validate data before saving
+        validation_data = {
+            'title': opportunity.title,
+            'company': opportunity.company,
+            'description': opportunity.description,
+            'job_type': opportunity.job_type,
+            'apply_link': opportunity.apply_link,
+            'location': opportunity.location,
+        }
+        result = validate_opportunity(validation_data)
+        
+        if not result.is_valid:
+            self._logger.warning(f"Invalid data for '{opportunity.title}': {result.errors}")
+            return None
+        
+        if result.warnings:
+            self._logger.debug(f"Validation warnings: {result.warnings}")
+        
+        # Check for duplicates
         if self.is_duplicate(opportunity):
             logger.debug(f"Skipping duplicate: {opportunity.title}")
             return None
         
+        # Use sanitized data from validation
+        data = result.sanitized_data
         job = Job.objects.create(
-            title=opportunity.title[:255],
-            company=opportunity.company[:255],
-            location=opportunity.location[:255],
-            description=opportunity.description,
-            job_type=opportunity.job_type,
-            apply_link=opportunity.apply_link,
+            title=data['title'],
+            company=data['company'],
+            location=data['location'],
+            description=data['description'],
+            job_type=data['job_type'],
+            apply_link=data['apply_link'],
             source=opportunity.source or self.source_name,
         )
         logger.info(f"Saved: {job.title} at {job.company}")
