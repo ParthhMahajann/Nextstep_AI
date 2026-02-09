@@ -131,6 +131,12 @@ class ScraperOrchestrator:
             'quick_args': {'limit': 15},
             'description': 'National Career Service (Govt jobs)',
         },
+        'arbeitnow': {
+            'class': None,
+            'args': {'limit': 50},
+            'quick_args': {'limit': 20},
+            'description': 'Arbeitnow (Remote/Startup jobs)',
+        },
     }
     
     def __init__(self, quick_mode: bool = False):

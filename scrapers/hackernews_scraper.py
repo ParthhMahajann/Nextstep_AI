@@ -192,7 +192,8 @@ class HackerNewsScraper(BaseScraper):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    from logging_config import setup_logging
+    setup_logging(level=logging.INFO, log_to_file=True, source_name='hackernews')
     
     scraper = HackerNewsScraper(max_comments=50)
     stats = scraper.run()

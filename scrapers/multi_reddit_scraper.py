@@ -54,6 +54,23 @@ class MultiRedditScraper(BaseScraper):
             'flair_filter': None,
             'job_types': ['freelance', 'part-time'],
         },
+        # India-focused subreddits
+        'developersIndia': {
+            'flair_filter': None,
+            'job_types': ['job', 'internship'],
+        },
+        'IndiaJobs': {
+            'flair_filter': None,
+            'job_types': ['job'],
+        },
+        'indianstartups': {
+            'flair_filter': None,
+            'job_types': ['job', 'internship'],
+        },
+        'cscareerquestionsIN': {
+            'flair_filter': None,
+            'job_types': ['job', 'internship'],
+        },
     }
     
     # Keywords for filtering
@@ -181,7 +198,8 @@ class MultiRedditScraper(BaseScraper):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    from logging_config import setup_logging
+    setup_logging(level=logging.INFO, log_to_file=True, source_name='reddit')
     
     scraper = MultiRedditScraper(limit_per_sub=20)
     stats = scraper.run()

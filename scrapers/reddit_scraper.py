@@ -128,11 +128,8 @@ class RedditForHireScraper(BaseScraper):
 
 
 if __name__ == "__main__":
-    # Configure logging for standalone execution
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    from logging_config import setup_logging
+    setup_logging(level=logging.INFO, log_to_file=True, source_name='reddit_forhire')
     
     scraper = RedditForHireScraper(limit=30)
     stats = scraper.run()

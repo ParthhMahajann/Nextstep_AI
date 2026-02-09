@@ -51,6 +51,11 @@ DEFAULT_RATE_LIMITS: Dict[str, RateLimitConfig] = {
         requests_per_hour=200,
         min_delay=3.0,  # Respectful rate for govt site
     ),
+    'arbeitnow': RateLimitConfig(
+        requests_per_minute=30,
+        requests_per_hour=400,
+        min_delay=2.0,
+    ),
     'default': RateLimitConfig(
         requests_per_minute=30,
         requests_per_hour=500,

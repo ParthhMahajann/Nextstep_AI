@@ -141,8 +141,9 @@ class InternshalaScraper(BaseScraper):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    from logging_config import setup_logging
+    setup_logging(level=logging.INFO, log_to_file=True, source_name='internshala')
     
-    scraper = InternshalaScaper(max_per_category=5)
+    scraper = InternshalaScraper(max_per_category=5)
     stats = scraper.run()
     print(f"\nScrape complete: {stats}")
