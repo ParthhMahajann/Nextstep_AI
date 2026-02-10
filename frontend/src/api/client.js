@@ -97,7 +97,15 @@ export const savedJobsAPI = {
 // AI API
 export const aiAPI = {
     generateEmail: (data) => api.post('/ai/generate-email/', data),
-    analyzeResume: (data) => api.post('/ai/analyze-resume/', data),
+    analyzeResume: (data) => {
+        // If data is FormData (file upload), let browser set Content-Type
+        if (data instanceof FormData) {
+            return api.post('/ai/analyze-resume/', data, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+        }
+        return api.post('/ai/analyze-resume/', data);
+    },
     generateCoverLetter: (data) => api.post('/ai/cover-letter/', data),
     getApplicationTips: (data) => api.post('/ai/application-tips/', data),
 };

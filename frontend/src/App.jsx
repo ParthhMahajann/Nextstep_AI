@@ -12,6 +12,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { SavedJobsPage } from './pages/SavedJobsPage';
+import { ResumeAnalyzerPage } from './pages/ResumeAnalyzerPage';
 
 // Create query client
 const queryClient = new QueryClient();
@@ -72,6 +73,11 @@ function AppContent() {
       <Route path="/saved" element={
         <ProtectedRoute>
           <SavedJobsPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/resume-analyzer" element={
+        <ProtectedRoute>
+          <ResumeAnalyzerPage />
         </ProtectedRoute>
       } />
 

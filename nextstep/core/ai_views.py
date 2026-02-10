@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 # Add ai_engine to path
-AI_ENGINE_PATH = Path(__file__).resolve().parent.parent.parent.parent / 'ai_engine'
+AI_ENGINE_PATH = Path(__file__).resolve().parent.parent.parent / 'ai_engine'
 if str(AI_ENGINE_PATH) not in sys.path:
     sys.path.insert(0, str(AI_ENGINE_PATH))
 
@@ -94,27 +94,50 @@ class GenerateEmailView(APIView):
 
 
 class AnalyzeResumeView(APIView):
-    """Analyze resume and provide feedback."""
+    """Analyze resume and provide feedback. Supports file upload (PDF/DOCX) or text input."""
     
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
-        serializer = ResumeAnalysisSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
+        resume_text = None
         
-        resume_text = data['resume_text']
+        # Check if a file was uploaded
+        if 'resume_file' in request.FILES:
+            from .file_utils import extract_resume_text
+            
+            uploaded_file = request.FILES['resume_file']
+            try:
+                resume_text = extract_resume_text(
+                    file=uploaded_file,
+                    content_type=uploaded_file.content_type,
+                    filename=uploaded_file.name
+                )
+            except ValueError as e:
+                return Response(
+                    {'error': str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            # Fall back to text input
+            resume_text = request.data.get('resume_text', '')
+        
+        if not resume_text or not resume_text.strip():
+            return Response(
+                {'error': 'Please provide a resume file or text'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Get job details if provided
-        job_description = data.get('job_description', '')
-        job_title = data.get('job_title', '')
+        job_description = request.data.get('job_description', '')
+        job_title = request.data.get('job_title', '')
+        job_id = request.data.get('job_id')
         
-        if data.get('job_id'):
+        if job_id:
             try:
-                job = Job.objects.get(id=data['job_id'])
+                job = Job.objects.get(id=int(job_id))
                 job_description = job.description
                 job_title = job.title
-            except Job.DoesNotExist:
+            except (Job.DoesNotExist, ValueError):
                 pass
         
         try:

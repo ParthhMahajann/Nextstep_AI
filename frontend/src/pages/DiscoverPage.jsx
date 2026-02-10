@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Briefcase, Menu, User, LogOut } from 'lucide-react';
+import { Briefcase, Menu, User, LogOut, FileText } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CardStack, SwipeActions } from '../components/SwipeCard';
 import { useJobsStore } from '../store/jobsStore';
@@ -92,6 +92,14 @@ export function DiscoverPage() {
                                 >
                                     <Briefcase size={18} />
                                     Saved Jobs
+                                </Link>
+                                <Link
+                                    to="/resume-analyzer"
+                                    className="flex items-center gap-2 px-4 py-3 hover:bg-white/5 transition"
+                                    onClick={() => setShowMenu(false)}
+                                >
+                                    <FileText size={18} />
+                                    Resume Analyzer
                                 </Link>
                                 <button
                                     onClick={handleLogout}
