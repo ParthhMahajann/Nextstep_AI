@@ -124,7 +124,8 @@ class JobListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'company', 'location', 
             'job_type', 'job_type_display', 'source', 
-            'scraped_at', 'is_active'
+            'scraped_at', 'is_active',
+            'ai_summary', 'experience_level', 'role_type', 'ai_skills',
         ]
 
 
@@ -139,7 +140,8 @@ class JobDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'company', 'location', 'description',
             'job_type', 'job_type_display', 'apply_link', 'source',
-            'required_skills', 'scraped_at', 'updated_at', 'is_active'
+            'required_skills', 'scraped_at', 'updated_at', 'is_active',
+            'ai_summary', 'experience_level', 'role_type', 'ai_skills',
         ]
 
 

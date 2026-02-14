@@ -401,6 +401,7 @@ def main():
     parser.add_argument('--list', action='store_true', help='List available scrapers')
     parser.add_argument('--scheduled', action='store_true', help='Run in scheduler mode')
     parser.add_argument('--interval', type=int, help='Interval in minutes for scheduled runs')
+    parser.add_argument('--enrich', action='store_true', help='Run AI enrichment after scraping')
     
     args = parser.parse_args()
     
@@ -426,9 +427,25 @@ def main():
     logger.info(f"Mode: {'Quick' if args.quick else 'Full'}")
     if sources:
         logger.info(f"Sources: {', '.join(sources)}")
+    if args.enrich:
+        logger.info("Post-scrape enrichment: ENABLED")
     logger.info("=" * 60)
     
-    orchestrator.run_pipeline(sources=sources)
+    metrics = orchestrator.run_pipeline(sources=sources)
+    
+    # Run AI enrichment if requested
+    if args.enrich and metrics.total_saved > 0:
+        logger.info("")
+        logger.info("=" * 60)
+        logger.info("STARTING AI ENRICHMENT")
+        logger.info("=" * 60)
+        try:
+            from enrich_jobs import enrich_jobs
+            enrich_jobs(limit=metrics.total_saved, delay=1.5)
+        except Exception as e:
+            logger.error(f"Enrichment failed: {e}")
+    elif args.enrich:
+        logger.info("No new jobs saved, skipping enrichment")
 
 
 if __name__ == "__main__":

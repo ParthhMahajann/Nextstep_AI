@@ -107,6 +107,25 @@ class Job(models.Model):
         ('contract', 'Contract'),
     ]
     
+    EXPERIENCE_LEVELS = [
+        ('entry', 'Entry Level'),
+        ('mid', 'Mid Level'),
+        ('senior', 'Senior Level'),
+        ('any', 'Any Level'),
+    ]
+    
+    ROLE_TYPES = [
+        ('frontend', 'Frontend'),
+        ('backend', 'Backend'),
+        ('fullstack', 'Full Stack'),
+        ('data', 'Data Science'),
+        ('devops', 'DevOps'),
+        ('design', 'Design'),
+        ('marketing', 'Marketing'),
+        ('management', 'Management'),
+        ('other', 'Other'),
+    ]
+    
     # Basic info
     title = models.CharField(max_length=255)
     company = models.CharField(max_length=255)
@@ -124,6 +143,22 @@ class Job(models.Model):
     )
     embedding = models.BinaryField(null=True, blank=True)  # Job description embedding
     
+    # AI Enrichment fields
+    ai_summary = models.TextField(blank=True, default='', help_text="AI-generated job summary")
+    experience_level = models.CharField(
+        max_length=20, choices=EXPERIENCE_LEVELS, blank=True, default='',
+        help_text="AI-extracted experience level"
+    )
+    role_type = models.CharField(
+        max_length=20, choices=ROLE_TYPES, blank=True, default='',
+        help_text="AI-extracted role type"
+    )
+    ai_skills = models.JSONField(
+        default=list, blank=True,
+        help_text="AI-extracted skills list"
+    )
+    is_enriched = models.BooleanField(default=False, help_text="Whether AI enrichment has been applied")
+    
     # Metadata
     scraped_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -135,6 +170,7 @@ class Job(models.Model):
             models.Index(fields=['job_type']),
             models.Index(fields=['source']),
             models.Index(fields=['scraped_at']),
+            models.Index(fields=['is_enriched']),
         ]
     
     def __str__(self):
