@@ -433,15 +433,15 @@ def main():
     
     metrics = orchestrator.run_pipeline(sources=sources)
     
-    # Run AI enrichment if requested
+    # Run ML enrichment if requested
     if args.enrich and metrics.total_saved > 0:
         logger.info("")
         logger.info("=" * 60)
-        logger.info("STARTING AI ENRICHMENT")
+        logger.info("STARTING ML ENRICHMENT (Local)")
         logger.info("=" * 60)
         try:
             from enrich_jobs import enrich_jobs
-            enrich_jobs(limit=metrics.total_saved, delay=1.5)
+            enrich_jobs(limit=metrics.total_saved)
         except Exception as e:
             logger.error(f"Enrichment failed: {e}")
     elif args.enrich:
