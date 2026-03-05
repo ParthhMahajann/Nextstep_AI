@@ -45,6 +45,41 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'date_joined']
 
 
+class VerifyEmailSerializer(serializers.Serializer):
+    """Serializer for email verification."""
+    
+    token = serializers.UUIDField(required=True)
+
+
+class ResendVerificationSerializer(serializers.Serializer):
+    """Serializer for resending verification email."""
+    
+    email = serializers.EmailField(required=True)
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Serializer for requesting a password reset."""
+    
+    email = serializers.EmailField(required=True)
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Serializer for confirming a password reset."""
+    
+    token = serializers.UUIDField(required=True)
+    password = serializers.CharField(
+        write_only=True,
+        required=True,
+        validators=[validate_password],
+    )
+    password_confirm = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError({"password": "Passwords do not match."})
+        return attrs
+
+
 # ==================== Skill Serializers ====================
 
 class SkillSerializer(serializers.ModelSerializer):

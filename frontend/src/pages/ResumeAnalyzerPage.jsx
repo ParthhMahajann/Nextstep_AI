@@ -18,7 +18,8 @@ import {
     Briefcase,
     Upload,
     X,
-    Type
+    Type,
+    Wand2
 } from 'lucide-react';
 import { aiAPI, savedJobsAPI } from '../api/client';
 
@@ -203,8 +204,8 @@ export function ResumeAnalyzerPage() {
                         <button
                             onClick={() => setInputMode('upload')}
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${inputMode === 'upload'
-                                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/50'
-                                    : 'bg-slate-800/50 text-slate-400 border border-white/10 hover:bg-slate-700/50'
+                                ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/50'
+                                : 'bg-slate-800/50 text-slate-400 border border-white/10 hover:bg-slate-700/50'
                                 }`}
                         >
                             <Upload size={16} />
@@ -213,8 +214,8 @@ export function ResumeAnalyzerPage() {
                         <button
                             onClick={() => setInputMode('text')}
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${inputMode === 'text'
-                                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/50'
-                                    : 'bg-slate-800/50 text-slate-400 border border-white/10 hover:bg-slate-700/50'
+                                ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/50'
+                                : 'bg-slate-800/50 text-slate-400 border border-white/10 hover:bg-slate-700/50'
                                 }`}
                         >
                             <Type size={16} />
@@ -232,8 +233,8 @@ export function ResumeAnalyzerPage() {
                                     onDrop={handleDrop}
                                     onClick={() => fileInputRef.current?.click()}
                                     className={`mb-4 border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${isDragging
-                                            ? 'border-indigo-500 bg-indigo-500/10'
-                                            : 'border-white/20 hover:border-indigo-500/50 hover:bg-indigo-500/5'
+                                        ? 'border-indigo-500 bg-indigo-500/10'
+                                        : 'border-white/20 hover:border-indigo-500/50 hover:bg-indigo-500/5'
                                         }`}
                                 >
                                     <input
@@ -431,7 +432,7 @@ export function ResumeAnalyzerPage() {
                             </div>
                         </div>
 
-                        {/* Suggestions */}
+                        {/* General Suggestions */}
                         {analysis.suggestions && (
                             <div className="glass rounded-2xl p-6">
                                 <div className="flex items-center gap-2 mb-4">
@@ -442,6 +443,54 @@ export function ResumeAnalyzerPage() {
                                     {analysis.suggestions}
                                 </p>
                             </div>
+                        )}
+
+                        {/* Job-Tailored Suggestions */}
+                        {selectedJobId && analysis.job_tailored_suggestions && analysis.job_tailored_suggestions.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 16 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.15 }}
+                                className="glass rounded-2xl p-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(109,40,217,0.04) 100%)',
+                                    borderColor: 'rgba(139,92,246,0.25)'
+                                }}
+                            >
+                                <div className="flex items-center gap-3 mb-5">
+                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(139,92,246,0.18)' }}>
+                                        <Wand2 size={18} className="text-violet-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-violet-300">Job-Tailored Suggestions</h3>
+                                        <p className="text-xs text-slate-400 mt-0.5">Specific edits to match this role</p>
+                                    </div>
+                                    <span className="ml-auto px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(139,92,246,0.18)', color: '#c4b5fd' }}>
+                                        {analysis.job_tailored_suggestions.length} suggestions
+                                    </span>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {analysis.job_tailored_suggestions.map((suggestion, index) => (
+                                        <motion.div
+                                            key={index}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.05 * index }}
+                                            className="flex gap-3 p-4 rounded-xl transition-all hover:scale-[1.01]"
+                                            style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)' }}
+                                        >
+                                            <span
+                                                className="flex-shrink-0 w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center"
+                                                style={{ background: 'rgba(139,92,246,0.22)', color: '#c4b5fd' }}
+                                            >
+                                                {index + 1}
+                                            </span>
+                                            <p className="text-slate-300 text-sm leading-relaxed">{suggestion}</p>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </motion.div>
                         )}
                     </motion.div>
                 )}

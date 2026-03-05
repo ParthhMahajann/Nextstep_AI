@@ -13,6 +13,10 @@ from .views import (
     UserSkillViewSet,
     JobViewSet,
     SavedJobViewSet,
+    VerifyEmailView,
+    ResendVerificationView,
+    PasswordResetRequestView,
+    PasswordResetConfirmView,
 )
 
 from .ai_views import (
@@ -35,6 +39,10 @@ urlpatterns = [
     path('auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/me/', CurrentUserView.as_view(), name='current_user'),
+    path('auth/verify-email/', VerifyEmailView.as_view(), name='verify_email'),
+    path('auth/resend-verification/', ResendVerificationView.as_view(), name='resend_verification'),
+    path('auth/password-reset/', PasswordResetRequestView.as_view(), name='password_reset'),
+    path('auth/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     
     # Profile endpoint
     path('profile/', ProfileView.as_view(), name='profile'),

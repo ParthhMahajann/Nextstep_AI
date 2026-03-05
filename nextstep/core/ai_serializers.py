@@ -48,6 +48,12 @@ class ResumeAnalysisResponseSerializer(serializers.Serializer):
     keywords_missing = serializers.ListField(child=serializers.CharField())
     match_score = serializers.FloatField()
     suggestions = serializers.CharField()
+    job_tailored_suggestions = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        default=list,
+        help_text="Specific, job-targeted resume edits (only present when a job is provided)"
+    )
 
 
 class CoverLetterSerializer(serializers.Serializer):

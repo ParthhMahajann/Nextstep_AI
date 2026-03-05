@@ -34,6 +34,11 @@ class ResumeAnalysis:
     keywords_missing: List[str]
     match_score: float
     suggestions: str
+    job_tailored_suggestions: List[str] = None
+
+    def __post_init__(self):
+        if self.job_tailored_suggestions is None:
+            self.job_tailored_suggestions = []
 
 
 class GroqAIService:
@@ -157,6 +162,67 @@ Subject: [your subject line]
             word_count=len(body.split())
         )
     
+    def generate_job_tailored_suggestions(
+        self,
+        resume_text: str,
+        job_title: str,
+        job_description: str
+    ) -> List[str]:
+        """
+        Generate specific, actionable resume edits tailored to a target job.
+
+        Returns a list of 5-7 concrete suggestions (e.g. rewrite bullets,
+        restructure sections, add missing keywords in context).
+        """
+        prompt = f"""You are a professional resume coach. A candidate wants to tailor their resume for a specific job.
+
+TARGET JOB:
+- Title: {job_title}
+- Description: {job_description[:700]}
+
+CANDIDATE'S RESUME:
+{resume_text[:2500]}
+
+Provide 5 to 7 SPECIFIC, ACTIONABLE resume edit suggestions tailored to this exact job.
+Each suggestion must:
+- Reference a concrete section or bullet of the resume (e.g. "In your Experience section at Company X…")
+- Explain what to change and why it matters for this role
+- Be immediately actionable (no vague advice like "improve your resume")
+
+Format your response as a numbered list ONLY, like:
+1. [Your suggestion here]
+2. [Your suggestion here]
+...
+
+Do NOT include any preamble, headers, or closing remarks — just the numbered list."""
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert resume coach who gives precise, job-specific resume editing advice. "
+                    "Always reference actual content from the resume and connect edits to the job requirements."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ]
+
+        response = self._chat(messages, model=self.MODELS['smart'], max_tokens=1200)
+
+        suggestions = []
+        for line in response.strip().split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+            # Strip leading numbering like "1." or "1)" or "- "
+            import re
+            cleaned = re.sub(r'^[\d]+[.)\s]+', '', line).strip()
+            cleaned = re.sub(r'^[-•]\s*', '', cleaned).strip()
+            if cleaned:
+                suggestions.append(cleaned)
+
+        return suggestions[:7]
+
     def analyze_resume(
         self,
         resume_text: str,
@@ -165,19 +231,20 @@ Subject: [your subject line]
     ) -> ResumeAnalysis:
         """
         Analyze a resume and provide improvement suggestions.
-        
+
         Args:
             resume_text: The resume content
             job_description: Optional job to match against
             job_title: Optional job title for context
-            
+
         Returns:
-            ResumeAnalysis with strengths, improvements, etc.
+            ResumeAnalysis with strengths, improvements, keywords, score,
+            general suggestions, and (when a job is provided) job-tailored suggestions.
         """
         job_context = ""
         if job_description:
             job_context = f"\nTARGET JOB:\n- Title: {job_title}\n- Description: {job_description[:500]}"
-        
+
         prompt = f"""Analyze this resume and provide actionable feedback.
 
 RESUME:
@@ -213,9 +280,9 @@ SUGGESTIONS:
             {"role": "system", "content": "You are an expert resume reviewer and career coach. Provide specific, actionable feedback."},
             {"role": "user", "content": prompt}
         ]
-        
+
         response = self._chat(messages, max_tokens=1500)
-        
+
         # Parse response
         strengths = []
         improvements = []
@@ -223,9 +290,9 @@ SUGGESTIONS:
         keywords_missing = []
         match_score = 0.5
         suggestions = ""
-        
+
         current_section = None
-        
+
         for line in response.split('\n'):
             line = line.strip()
             if 'STRENGTHS:' in line.upper():
@@ -240,7 +307,7 @@ SUGGESTIONS:
                 try:
                     score_str = line.split(':')[-1].strip().replace('%', '')
                     match_score = float(score_str) / 100
-                except:
+                except Exception:
                     pass
                 current_section = None
             elif 'SUGGESTIONS:' in line.upper():
@@ -257,14 +324,27 @@ SUGGESTIONS:
                     keywords_missing.append(item)
             elif current_section == 'suggestions' and line:
                 suggestions += line + " "
-        
+
+        # Generate job-tailored suggestions if a job was provided
+        job_tailored = []
+        if job_description and job_title:
+            try:
+                job_tailored = self.generate_job_tailored_suggestions(
+                    resume_text=resume_text,
+                    job_title=job_title,
+                    job_description=job_description,
+                )
+            except Exception as e:
+                logger.warning(f"Job-tailored suggestion generation failed: {e}")
+
         return ResumeAnalysis(
             strengths=strengths[:5],
             improvements=improvements[:5],
             keywords_found=keywords_found[:10],
             keywords_missing=keywords_missing[:10],
             match_score=min(1.0, max(0.0, match_score)),
-            suggestions=suggestions.strip()
+            suggestions=suggestions.strip(),
+            job_tailored_suggestions=job_tailored,
         )
     
     def generate_cover_letter(

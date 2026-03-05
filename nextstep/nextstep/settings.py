@@ -209,3 +209,20 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+
+
+# Email Configuration
+# Defaults to console backend (prints emails to terminal) for development.
+# Set EMAIL_BACKEND to 'django.core.mail.backends.smtp.EmailBackend' in production.
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend'
+)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'NextStep AI <noreply@nextstep.ai>')
+
+# Frontend URL (used for email verification and password reset links)
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')

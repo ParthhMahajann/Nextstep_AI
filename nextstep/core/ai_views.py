@@ -157,6 +157,7 @@ class AnalyzeResumeView(APIView):
                 'keywords_missing': analysis.keywords_missing,
                 'match_score': analysis.match_score,
                 'suggestions': analysis.suggestions,
+                'job_tailored_suggestions': analysis.job_tailored_suggestions,
             })
             
             return Response(response_serializer.data)

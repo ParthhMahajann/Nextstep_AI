@@ -1,7 +1,10 @@
+import uuid
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 
 class Skill(models.Model):
@@ -237,3 +240,37 @@ def create_user_profile(sender, instance, created, **kwargs):
 def save_user_profile(sender, instance, **kwargs):
     if hasattr(instance, 'profile'):
         instance.profile.save()
+
+
+class EmailVerificationToken(models.Model):
+    """Single-use token for email verification. Expires after 24 hours."""
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name='email_verification_token'
+    )
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(hours=24)
+
+    def __str__(self):
+        return f"EmailVerification for {self.user.username}"
+
+
+class PasswordResetToken(models.Model):
+    """Single-use token for password reset. Expires after 1 hour."""
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name='password_reset_token'
+    )
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(hours=1)
+
+    def __str__(self):
+        return f"PasswordReset for {self.user.username}"
