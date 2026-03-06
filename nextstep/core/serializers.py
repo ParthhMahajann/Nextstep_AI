@@ -128,23 +128,47 @@ class UserProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     skills = UserSkillSerializer(many=True, read_only=True)
     skill_count = serializers.IntegerField(read_only=True)
+    experience_level_display = serializers.CharField(
+        source='get_experience_level_display', read_only=True
+    )
     
     class Meta:
         model = UserProfile
         fields = [
-            'id', 'user', 'bio', 'resume_text', 
-            'preferred_job_types', 'preferred_locations',
-            'skills', 'skill_count', 'created_at', 'updated_at'
+            'id', 'user',
+            # Demographics
+            'age', 'phone', 'date_of_birth',
+            # Professional
+            'bio', 'experience_level', 'experience_level_display',
+            # Education & Qualifications
+            'education', 'qualifications',
+            # Resume
+            'resume_text', 'resume_file',
+            # Links
+            'portfolio_url', 'linkedin_url', 'github_url',
+            # Preferences
+            'preferred_job_types', 'preferred_locations', 'open_to_remote', 'expected_salary',
+            # Skills
+            'skills', 'skill_count',
+            # Timestamps
+            'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating user profile."""
+    """Serializer for updating user profile (supports multipart for resume_file)."""
     
     class Meta:
         model = UserProfile
-        fields = ['bio', 'resume_text', 'preferred_job_types', 'preferred_locations']
+        fields = [
+            'age', 'phone', 'date_of_birth',
+            'bio', 'experience_level',
+            'education', 'qualifications',
+            'resume_text', 'resume_file',
+            'portfolio_url', 'linkedin_url', 'github_url',
+            'preferred_job_types', 'preferred_locations', 'open_to_remote', 'expected_salary',
+        ]
 
 
 # ==================== Job Serializers ====================

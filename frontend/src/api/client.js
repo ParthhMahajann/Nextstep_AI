@@ -62,12 +62,21 @@ export const authAPI = {
     login: (data) => api.post('/auth/login/', data),
     getMe: () => api.get('/auth/me/'),
     refreshToken: (refresh) => api.post('/auth/refresh/', { refresh }),
+    verifyEmail: (token) => api.post('/auth/verify-email/', { token }),
+    resendVerification: (email) => api.post('/auth/resend-verification/', { email }),
+    forgotPassword: (email) => api.post('/auth/password-reset/', { email }),
+    resetPassword: (token, password, password_confirm) =>
+        api.post('/auth/password-reset/confirm/', { token, password, password_confirm }),
 };
 
 // Profile API
 export const profileAPI = {
     get: () => api.get('/profile/'),
     update: (data) => api.patch('/profile/', data),
+    updateWithFile: (formData) =>
+        api.patch('/profile/', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }),
 };
 
 // Skills API

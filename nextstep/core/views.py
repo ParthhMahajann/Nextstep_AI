@@ -253,12 +253,18 @@ class ProfileView(APIView):
         return Response(serializer.data)
     
     def patch(self, request):
-        """Update current user's profile."""
+        """Update current user's profile. Supports multipart/form-data for resume_file."""
         profile = request.user.profile
-        serializer = UserProfileUpdateSerializer(profile, data=request.data, partial=True)
+        # Pass request.FILES so resume_file upload works with multipart requests
+        serializer = UserProfileUpdateSerializer(
+            profile,
+            data=request.data,
+            partial=True,
+            context={'request': request},
+        )
         if serializer.is_valid():
             serializer.save()
-            return Response(UserProfileSerializer(profile).data)
+            return Response(UserProfileSerializer(profile, context={'request': request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

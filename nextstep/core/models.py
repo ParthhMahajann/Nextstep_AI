@@ -32,31 +32,65 @@ class Skill(models.Model):
 
 
 class UserProfile(models.Model):
-    """Extended user profile for opportunity matching."""
-    
+    """Extended user profile for opportunity matching and AI/ML personalisation."""
+
+    EXPERIENCE_LEVEL_CHOICES = [
+        ('fresher', 'Fresher (0 years)'),
+        ('junior', 'Junior (1-2 years)'),
+        ('mid', 'Mid Level (3-5 years)'),
+        ('senior', 'Senior (5+ years)'),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+
+    # ── Demographics ──────────────────────────────────────────────────────────
+    age = models.PositiveIntegerField(null=True, blank=True)
+    phone = models.CharField(max_length=20, blank=True, default='')
+    date_of_birth = models.DateField(null=True, blank=True)
+
+    # ── Professional Summary ──────────────────────────────────────────────────
     bio = models.TextField(blank=True, help_text="Brief professional summary")
-    resume_text = models.TextField(blank=True, help_text="Parsed resume content")
-    
-    # Preferences stored as JSON
+    experience_level = models.CharField(
+        max_length=20, choices=EXPERIENCE_LEVEL_CHOICES, blank=True, default=''
+    )
+
+    # ── Education & Qualifications ────────────────────────────────────────────
+    # e.g. {"degree": "btech", "field": "Computer Science", "institution": "IIT", "graduation_year": "2025", "gpa": "8.5"}
+    education = models.JSONField(default=dict, blank=True)
+    # list of {"title": "AWS Cloud Practitioner", "issuer": "Amazon", "year": "2024"}
+    qualifications = models.JSONField(default=list, blank=True)
+
+    # ── Resume ────────────────────────────────────────────────────────────────
+    resume_text = models.TextField(blank=True, help_text="Parsed/pasted resume content")
+    resume_file = models.FileField(
+        upload_to='resumes/', null=True, blank=True,
+        help_text="Uploaded resume PDF/DOCX"
+    )
+
+    # ── Social & Portfolio Links ──────────────────────────────────────────────
+    portfolio_url = models.URLField(blank=True, default='')
+    linkedin_url = models.URLField(blank=True, default='')
+    github_url = models.URLField(blank=True, default='')
+
+    # ── Job Preferences ───────────────────────────────────────────────────────
     preferred_job_types = models.JSONField(
-        default=list,
-        blank=True,
+        default=list, blank=True,
         help_text="List of preferred job types: job, internship, freelance, etc."
     )
     preferred_locations = models.JSONField(
-        default=list,
-        blank=True,
+        default=list, blank=True,
         help_text="List of preferred locations or 'Remote'"
     )
-    
-    # Profile completeness tracking
+    open_to_remote = models.BooleanField(default=True)
+    expected_salary = models.CharField(max_length=50, blank=True, default='')
+
+    # ── Metadata ──────────────────────────────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
         return f"Profile: {self.user.username}"
-    
+
     @property
     def skill_count(self):
         return self.skills.count()
