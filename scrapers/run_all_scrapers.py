@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 from multi_reddit_scraper import MultiRedditScraper
 from hackernews_scraper import HackerNewsScraper
 from remotive_scraper import RemotiveScraper
+from jsearch_scraper import JSearchScraper
 from data_validator import validate_opportunity
 
 
@@ -115,6 +116,12 @@ class ScraperOrchestrator:
             'args': {'limit': 50},
             'quick_args': {'limit': 20},
             'description': 'Remotive.io remote jobs',
+        },
+        'jsearch': {
+            'class': JSearchScraper,
+            'args': {'limit': 80},
+            'quick_args': {'limit': 20},
+            'description': 'JSearch (LinkedIn, Indeed, Glassdoor via RapidAPI)',
         },
     }
     

@@ -97,25 +97,16 @@ class BaseScraper(ABC):
     ) -> requests.Response:
         """
         Make an HTTP request with automatic retry and rate limiting.
-        
-        Args:
-            url: Request URL
-            method: HTTP method (GET, POST, etc.)
-            params: Query parameters
-            data: Form data
-            json: JSON body
-            timeout: Request timeout in seconds
-            **kwargs: Additional requests arguments
-        
+
         Returns:
             requests.Response object
-        
+
         Raises:
             requests.RequestException on failure after all retries
         """
         self._respect_rate_limit()
         self._request_count += 1
-        
+
         @with_retry(
             max_retries=self.max_retries,
             base_delay=self.retry_base_delay,
@@ -132,9 +123,13 @@ class BaseScraper(ABC):
                 timeout=timeout,
                 **kwargs
             )
+            if response.status_code == 429:
+                self._rate_limiter.report_429()
+                response.raise_for_status()
             response.raise_for_status()
+            self._rate_limiter.report_success()
             return response
-        
+
         try:
             return _execute_request()
         except RETRYABLE_EXCEPTIONS as e:
@@ -151,6 +146,45 @@ class BaseScraper(ABC):
         """
         pass
     
+    def _validate_opportunity(self, opportunity: OpportunityData):
+        """
+        Validate an opportunity and return a Job instance (unsaved) ready for bulk_create,
+        or None if the data is invalid or a duplicate.
+        """
+        from core.models import Job
+
+        validation_data = {
+            'title': opportunity.title,
+            'company': opportunity.company,
+            'description': opportunity.description,
+            'job_type': opportunity.job_type,
+            'apply_link': opportunity.apply_link,
+            'location': opportunity.location,
+        }
+        result = validate_opportunity(validation_data)
+
+        if not result.is_valid:
+            self._logger.warning(f"Invalid data for '{opportunity.title}': {result.errors}")
+            return None
+
+        if result.warnings:
+            self._logger.debug(f"Validation warnings: {result.warnings}")
+
+        if self.is_duplicate(opportunity):
+            logger.debug(f"Skipping duplicate: {opportunity.title}")
+            return None
+
+        data = result.sanitized_data
+        return Job(
+            title=data['title'],
+            company=data['company'],
+            location=data['location'],
+            description=data['description'],
+            job_type=data['job_type'],
+            apply_link=data['apply_link'],
+            source=opportunity.source or self.source_name,
+        )
+
     def is_duplicate(self, opportunity: OpportunityData) -> bool:
         """
         Check if opportunity already exists in database.
@@ -231,17 +265,26 @@ class BaseScraper(ABC):
         try:
             opportunities = self.fetch_opportunities()
             stats["fetched"] = len(opportunities)
-            
+
+            # Validate and collect new (non-duplicate) jobs for bulk insert
+            jobs_to_create = []
             for opp in opportunities:
                 try:
-                    result = self.save_opportunity(opp)
-                    if result:
-                        stats["saved"] += 1
-                    else:
+                    validated = self._validate_opportunity(opp)
+                    if validated is None:
                         stats["duplicates"] += 1
+                        continue
+                    jobs_to_create.append(validated)
                 except Exception as e:
-                    logger.error(f"Error saving opportunity: {e}")
+                    logger.error(f"Error validating opportunity: {e}")
                     stats["errors"] += 1
+
+            if jobs_to_create:
+                from core.models import Job
+                created = Job.objects.bulk_create(jobs_to_create, ignore_conflicts=True)
+                stats["saved"] = len(created)
+                stats["duplicates"] += len(jobs_to_create) - len(created)
+                logger.info(f"Bulk created {len(created)} jobs from {self.source_name}")
         
         except Exception as e:
             logger.error(f"Error fetching opportunities from {self.source_name}: {e}")

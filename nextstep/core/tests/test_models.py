@@ -202,10 +202,13 @@ class SavedJobModelTests(TestCase):
             saved.refresh_from_db()
             self.assertEqual(saved.status, status_code)
 
-    def test_saved_job_cascade_delete_job(self):
-        """Deleting a job should cascade-delete saved entries."""
+    def test_saved_job_set_null_on_job_delete(self):
+        """Deleting a job should null-out the FK but preserve the SavedJob entry."""
         user = create_test_user()
         job = create_test_job()
-        SavedJob.objects.create(user_profile=user.profile, job=job)
+        saved = SavedJob.objects.create(user_profile=user.profile, job=job)
         job.delete()
-        self.assertEqual(SavedJob.objects.count(), 0)
+        # SavedJob is preserved (user history retained); job FK becomes NULL.
+        self.assertEqual(SavedJob.objects.count(), 1)
+        saved.refresh_from_db()
+        self.assertIsNone(saved.job)

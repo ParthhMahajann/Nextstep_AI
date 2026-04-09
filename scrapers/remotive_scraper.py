@@ -10,6 +10,7 @@ import sys
 import logging
 import requests
 from typing import List
+from bs4 import BeautifulSoup
 
 # Setup Django
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -118,7 +119,6 @@ class RemotiveScraper(BaseScraper):
                     description = f"Salary: {salary}\n\n{description}"
                 
                 # Clean HTML
-                from bs4 import BeautifulSoup
                 clean_desc = BeautifulSoup(description, 'lxml').get_text()
                 
                 location = job.get('candidate_required_location', 'Remote (Worldwide)')

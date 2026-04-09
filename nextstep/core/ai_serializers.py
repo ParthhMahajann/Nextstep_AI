@@ -10,7 +10,7 @@ class EmailGenerationSerializer(serializers.Serializer):
     job_id = serializers.IntegerField(required=False, help_text="Job ID to generate email for")
     job_title = serializers.CharField(max_length=255, required=False)
     company = serializers.CharField(max_length=255, required=False)
-    job_description = serializers.CharField(required=False, allow_blank=True)
+    job_description = serializers.CharField(required=False, allow_blank=True, max_length=10000)
     tone = serializers.ChoiceField(
         choices=['professional', 'casual', 'enthusiastic'],
         default='professional'
@@ -34,9 +34,9 @@ class EmailResponseSerializer(serializers.Serializer):
 
 class ResumeAnalysisSerializer(serializers.Serializer):
     """Request serializer for resume analysis."""
-    resume_text = serializers.CharField(help_text="Resume content to analyze")
+    resume_text = serializers.CharField(max_length=50000, help_text="Resume content to analyze")
     job_id = serializers.IntegerField(required=False, help_text="Optional job to match against")
-    job_description = serializers.CharField(required=False, allow_blank=True)
+    job_description = serializers.CharField(required=False, allow_blank=True, max_length=10000)
     job_title = serializers.CharField(max_length=255, required=False)
 
 
@@ -61,7 +61,7 @@ class CoverLetterSerializer(serializers.Serializer):
     job_id = serializers.IntegerField(required=False)
     job_title = serializers.CharField(max_length=255, required=False)
     company = serializers.CharField(max_length=255, required=False)
-    job_description = serializers.CharField(required=False, allow_blank=True)
+    job_description = serializers.CharField(required=False, allow_blank=True, max_length=10000)
     
     def validate(self, data):
         if not data.get('job_id') and not (data.get('job_title') and data.get('company')):
@@ -76,4 +76,4 @@ class ApplicationTipsSerializer(serializers.Serializer):
     job_id = serializers.IntegerField(required=False)
     job_title = serializers.CharField(max_length=255, required=False)
     company = serializers.CharField(max_length=255, required=False)
-    job_description = serializers.CharField(required=False, allow_blank=True)
+    job_description = serializers.CharField(required=False, allow_blank=True, max_length=10000)

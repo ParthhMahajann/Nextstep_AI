@@ -203,11 +203,13 @@ class Job(models.Model):
     
     class Meta:
         ordering = ['-scraped_at']
+        unique_together = [['source', 'apply_link']]
         indexes = [
             models.Index(fields=['job_type']),
             models.Index(fields=['source']),
             models.Index(fields=['scraped_at']),
             models.Index(fields=['is_enriched']),
+            models.Index(fields=['is_active']),
         ]
     
     def __str__(self):
@@ -232,8 +234,9 @@ class SavedJob(models.Model):
         related_name='saved_jobs'
     )
     job = models.ForeignKey(
-        Job, 
-        on_delete=models.CASCADE, 
+        Job,
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='saved_by'
     )
     

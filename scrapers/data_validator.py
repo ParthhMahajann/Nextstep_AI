@@ -5,6 +5,7 @@ Provides validation rules for scraped opportunity data
 to ensure data quality before database storage.
 """
 
+import html
 import re
 import logging
 from typing import List, Optional, Tuple
@@ -172,13 +173,8 @@ class DataValidator:
         # Remove null bytes and control characters
         text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text)
         
-        # Decode HTML entities
-        text = text.replace('&amp;', '&')
-        text = text.replace('&lt;', '<')
-        text = text.replace('&gt;', '>')
-        text = text.replace('&quot;', '"')
-        text = text.replace('&#x27;', "'")
-        text = text.replace('&#x2F;', '/')
+        # Decode all HTML entities (covers &amp;, &lt;, &#x27;, numeric refs, etc.)
+        text = html.unescape(text)
         
         return text.strip()
     

@@ -234,9 +234,11 @@ class SavedJobViewSetTests(TestCase):
         except Exception:
             pass  # IntegrityError is also acceptable — confirms the constraint works
 
-    def test_generate_email_stub(self):
-        """The generate_email action should return a Phase 3 pending message."""
+    def test_generate_email_delegates_to_ai(self):
+        """The generate_email action delegates to the AI service (returns JSON, not a stub)."""
         saved = SavedJob.objects.create(user_profile=self.user.profile, job=self.job)
         resp = self.client.post(f"{self.url}{saved.id}/generate_email/")
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertIn("Phase 3", resp.data["message"])
+        # Without a real GROQ key in CI, the AI service returns 503; what matters is
+        # that it's no longer a stub 200 with a "Phase 3" message.
+        self.assertNotEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertNotIn("Phase 3", str(resp.data))

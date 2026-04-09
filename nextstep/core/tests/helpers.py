@@ -1,6 +1,8 @@
 """
 Shared test fixtures and helpers for the core app test suite.
 """
+import uuid
+
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -27,13 +29,19 @@ def create_test_skill(name="Python", category="programming"):
 
 
 def create_test_job(**kwargs):
-    """Create and return a test job with sensible defaults."""
+    """Create and return a test job with sensible defaults.
+
+    A unique apply_link is generated automatically unless explicitly overridden,
+    so that multiple calls in the same test won't violate the (source, apply_link)
+    unique_together constraint added in migration 0006.
+    """
+    uid = uuid.uuid4().hex[:8]
     defaults = {
         "title": "Software Engineer",
         "company": "TestCorp",
         "description": "Build and maintain web applications using Python and Django.",
         "job_type": "job",
-        "apply_link": "https://example.com/apply",
+        "apply_link": f"https://example.com/apply/{uid}",
         "source": "test",
         "location": "Remote",
     }

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ':*)",
+      "Bash(git check-ignore:*)",
+      "Bash(python manage.py makemigrations core --name=\"job_unique_together_savedjob_set_null\")",
+      "Bash(python manage.py migrate)",
+      "Bash(python3 -c ':*)",
+      "Bash(xxd \"D:/Nextstep_AI/requirements.txt\")",
+      "Bash(iconv -f UTF-16LE -t UTF-8 \"D:/Nextstep_AI/requirements.txt\")",
+      "Bash(python manage.py test core --verbosity=1)",
+      "Bash(wait)",
+      "Bash(python manage.py test core --verbosity=1 --keepdb)",
+      "Bash(python manage.py test core --verbosity=2 --keepdb)"
+    ]
+  }
+}

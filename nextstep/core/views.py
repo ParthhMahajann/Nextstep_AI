@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
@@ -39,13 +40,46 @@ from .serializers import (
 logger = logging.getLogger(__name__)
 
 
+# ==================== Custom Throttles ====================
+
+class AuthRateThrottle(AnonRateThrottle):
+    """Strict throttle for unauthenticated auth endpoints (register, password reset)."""
+    scope = 'auth'
+
+
+class AIRateThrottle(UserRateThrottle):
+    """Throttle for AI endpoints to prevent LLM token abuse."""
+    scope = 'ai'
+
+
 # ==================== Email Helper ====================
 
 def _send_templated_email(subject, template_name, context, recipient_email):
-    """Send an HTML email using a Django template. Fails silently in dev."""
+    """
+    Send an HTML email using a Django template.
+    - SMTP mode  : sends a real email (requires EMAIL_HOST_USER/PASSWORD in .env)
+    - Console mode: prints email to terminal AND logs the action URL so devs can
+                    test the flow without needing real credentials.
+    """
     try:
         html_message = render_to_string(template_name, context)
         plain_message = strip_tags(html_message)
+
+        # ── Pretty-print the action URL in non-SMTP mode for easy testing ──
+        from django.conf import settings as _s
+        if 'console' in _s.EMAIL_BACKEND.lower():
+            action_url = context.get('verification_url') or context.get('reset_url') or ''
+            if action_url:
+                logger.info(
+                    "\n\n"
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"  📧  EMAIL (console mode) → {recipient_email}\n"
+                    f"  Subject : {subject}\n"
+                    f"  ➜  ACTION URL:\n"
+                    f"     {action_url}\n"
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                )
+
         send_mail(
             subject=subject,
             message=plain_message,
@@ -58,14 +92,16 @@ def _send_templated_email(subject, template_name, context, recipient_email):
         logger.error(f"Failed to send email to {recipient_email}: {e}")
 
 
+
 # ==================== Auth Views ====================
 
 class RegisterView(generics.CreateAPIView):
     """User registration endpoint. Sets user inactive until email is verified."""
-    
+
     queryset = User.objects.all()
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def perform_create(self, serializer):
         user = serializer.save()
@@ -85,12 +121,38 @@ class RegisterView(generics.CreateAPIView):
 
 class CurrentUserView(APIView):
     """Get current authenticated user details."""
-    
+
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+
+class LogoutView(APIView):
+    """Blacklist the refresh token to log the user out."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from rest_framework_simplejwt.exceptions import TokenError
+
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response(
+                {'detail': 'Refresh token is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except TokenError:
+            return Response(
+                {'detail': 'Invalid or already blacklisted token.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response({'detail': 'Successfully logged out.'})
 
 
 class VerifyEmailView(APIView):
@@ -107,18 +169,21 @@ class VerifyEmailView(APIView):
                 token=serializer.validated_data['token']
             )
         except EmailVerificationToken.DoesNotExist:
+            logger.warning("Email verification attempted with invalid token")
             return Response(
                 {"detail": "Invalid verification token."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if token_obj.is_used:
+            logger.warning("Email verification attempted with already-used token for user %s", token_obj.user_id)
             return Response(
                 {"detail": "This token has already been used."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if token_obj.is_expired():
+            logger.warning("Email verification attempted with expired token for user %s", token_obj.user_id)
             return Response(
                 {"detail": "This token has expired. Please request a new one."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -138,6 +203,7 @@ class ResendVerificationView(APIView):
     """Resend a verification email for an inactive user."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = ResendVerificationSerializer(data=request.data)
@@ -169,6 +235,7 @@ class PasswordResetRequestView(APIView):
     """Request a password reset email."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -200,6 +267,7 @@ class PasswordResetConfirmView(APIView):
     """Confirm password reset using the token and set a new password."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
@@ -210,18 +278,21 @@ class PasswordResetConfirmView(APIView):
                 token=serializer.validated_data['token']
             )
         except PasswordResetToken.DoesNotExist:
+            logger.warning("Password reset attempted with invalid token")
             return Response(
                 {"detail": "Invalid reset token."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if token_obj.is_used:
+            logger.warning("Password reset attempted with already-used token for user %s", token_obj.user_id)
             return Response(
                 {"detail": "This token has already been used."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if token_obj.is_expired():
+            logger.warning("Password reset attempted with expired token for user %s", token_obj.user_id)
             return Response(
                 {"detail": "This token has expired. Please request a new one."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -248,7 +319,12 @@ class ProfileView(APIView):
     
     def get(self, request):
         """Get current user's profile."""
-        profile = request.user.profile
+        profile = (
+            UserProfile.objects
+            .select_related('user')
+            .prefetch_related('skills__skill')
+            .get(user=request.user)
+        )
         serializer = UserProfileSerializer(profile)
         return Response(serializer.data)
     
@@ -365,7 +441,12 @@ class SavedJobViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return SavedJob.objects.filter(user_profile=self.request.user.profile)
+        return (
+            SavedJob.objects
+            .filter(user_profile=self.request.user.profile)
+            .select_related('job')
+            .prefetch_related('job__required_skills')
+        )
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -379,11 +460,12 @@ class SavedJobViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def generate_email(self, request, pk=None):
-        """Generate AI email draft for a saved job."""
-        # Placeholder for Phase 3 - AI email generation
+        """Generate AI cold-outreach email for a saved job."""
+        from .ai_views import GenerateEmailView
+
         saved_job = self.get_object()
-        return Response({
-            'message': 'Email generation will be implemented in Phase 3',
-            'job_title': saved_job.job.title,
-            'status': 'pending'
-        })
+        # Inject job_id so the AI view knows which job to target.
+        # request.data is a plain dict for JSON requests (mutable).
+        request._full_data = dict(request.data)
+        request._full_data['job_id'] = saved_job.job_id
+        return GenerateEmailView().post(request)

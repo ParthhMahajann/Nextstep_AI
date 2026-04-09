@@ -9,7 +9,7 @@ import time
 import random
 import logging
 import functools
-from typing import Callable, Tuple, Type, Optional
+from typing import Any, Callable, Tuple, Type, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ def retry_request(
     request_func: Callable,
     max_retries: int = 3,
     base_delay: float = 1.0,
-) -> any:
+) -> Any:
     """
     Execute a request function with retry logic.
     

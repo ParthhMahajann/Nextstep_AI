@@ -12,6 +12,7 @@ import logging
 import requests
 from typing import List, Optional
 from datetime import datetime
+from bs4 import BeautifulSoup
 
 # Setup Django
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -167,7 +168,6 @@ class HackerNewsScraper(BaseScraper):
                     parsed = self._parse_job_posting(text)
                     
                     # Clean HTML from description
-                    from bs4 import BeautifulSoup
                     clean_text = BeautifulSoup(text, 'lxml').get_text()
                     
                     opportunity = OpportunityData(

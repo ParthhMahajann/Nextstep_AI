@@ -5,6 +5,7 @@ Provides API endpoints for AI-powered features.
 """
 
 import sys
+import logging
 from pathlib import Path
 
 # Add ai_engine to path
@@ -16,6 +17,9 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from .views import AIRateThrottle
+
+logger = logging.getLogger(__name__)
 
 from .models import Job
 from .ai_serializers import (
@@ -30,8 +34,9 @@ from .ai_serializers import (
 
 class GenerateEmailView(APIView):
     """Generate cold outreach email for a job application."""
-    
+
     permission_classes = [IsAuthenticated]
+    throttle_classes = [AIRateThrottle]
     
     def post(self, request):
         serializer = EmailGenerationSerializer(data=request.data)
@@ -86,26 +91,50 @@ class GenerateEmailView(APIView):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        except Exception as e:
+        except Exception:
+            logger.exception("AI email generation failed for user %s", request.user.id)
             return Response(
-                {'error': f'AI service error: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'AI service temporarily unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
 
 class AnalyzeResumeView(APIView):
     """Analyze resume and provide feedback. Supports file upload (PDF/DOCX) or text input."""
-    
+
     permission_classes = [IsAuthenticated]
-    
+    throttle_classes = [AIRateThrottle]
+
+    MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+    ALLOWED_CONTENT_TYPES = {'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}
+    ALLOWED_EXTENSIONS = {'.pdf', '.docx'}
+
     def post(self, request):
         resume_text = None
-        
+
         # Check if a file was uploaded
         if 'resume_file' in request.FILES:
             from .file_utils import extract_resume_text
-            
+            import os
+
             uploaded_file = request.FILES['resume_file']
+
+            # Validate file size
+            if uploaded_file.size > self.MAX_UPLOAD_SIZE:
+                return Response(
+                    {'error': f'File too large. Maximum size is {self.MAX_UPLOAD_SIZE // (1024 * 1024)} MB.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Validate MIME type and extension
+            ext = os.path.splitext(uploaded_file.name)[1].lower()
+            if (uploaded_file.content_type not in self.ALLOWED_CONTENT_TYPES
+                    or ext not in self.ALLOWED_EXTENSIONS):
+                return Response(
+                    {'error': 'Only PDF and DOCX files are accepted.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             try:
                 resume_text = extract_resume_text(
                     file=uploaded_file,
@@ -167,17 +196,19 @@ class AnalyzeResumeView(APIView):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        except Exception as e:
+        except Exception:
+            logger.exception("AI resume analysis failed for user %s", request.user.id)
             return Response(
-                {'error': f'AI service error: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'AI service temporarily unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
 
 class GenerateCoverLetterView(APIView):
     """Generate cover letter for a job application."""
-    
+
     permission_classes = [IsAuthenticated]
+    throttle_classes = [AIRateThrottle]
     
     def post(self, request):
         serializer = CoverLetterSerializer(data=request.data)
@@ -224,17 +255,19 @@ class GenerateCoverLetterView(APIView):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        except Exception as e:
+        except Exception:
+            logger.exception("AI cover letter generation failed for user %s", request.user.id)
             return Response(
-                {'error': f'AI service error: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'AI service temporarily unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
 
 class ApplicationTipsView(APIView):
     """Get tips for applying to a specific job."""
-    
+
     permission_classes = [IsAuthenticated]
+    throttle_classes = [AIRateThrottle]
     
     def post(self, request):
         serializer = ApplicationTipsSerializer(data=request.data)
@@ -273,8 +306,9 @@ class ApplicationTipsView(APIView):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        except Exception as e:
+        except Exception:
+            logger.exception("AI application tips failed for user %s", request.user.id)
             return Response(
-                {'error': f'AI service error: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'AI service temporarily unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
             )

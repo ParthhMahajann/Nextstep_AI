@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from django.test import TestCase, override_settings
 from django.utils import timezone
+from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework import status
 from django.contrib.auth.models import User
@@ -21,6 +22,7 @@ class RegisterAPITests(TestCase):
     """Tests for POST /api/auth/register/."""
 
     def setUp(self):
+        cache.clear()  # Reset throttle counters between tests
         self.client = APIClient()
         self.url = "/api/auth/register/"
 
@@ -233,6 +235,7 @@ class ResendVerificationAPITests(TestCase):
     """Tests for POST /api/auth/resend-verification/."""
 
     def setUp(self):
+        cache.clear()  # Reset throttle counters between tests
         self.client = APIClient()
         self.url = "/api/auth/resend-verification/"
         self.user = User.objects.create_user(
@@ -269,6 +272,7 @@ class PasswordResetRequestAPITests(TestCase):
     """Tests for POST /api/auth/password-reset/."""
 
     def setUp(self):
+        cache.clear()  # Reset throttle counters between tests
         self.client = APIClient()
         self.url = "/api/auth/password-reset/"
         self.user = create_test_user()
@@ -296,6 +300,7 @@ class PasswordResetConfirmAPITests(TestCase):
     """Tests for POST /api/auth/password-reset/confirm/."""
 
     def setUp(self):
+        cache.clear()  # Reset throttle counters between tests
         self.client = APIClient()
         self.url = "/api/auth/password-reset/confirm/"
         self.user = create_test_user()

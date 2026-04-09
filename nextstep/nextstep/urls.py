@@ -17,7 +17,6 @@ def api_root(request):
             "jobs": "/api/jobs/",
             "skills": "/api/skills/",
             "saved_jobs": "/api/saved-jobs/",
-            "admin": "/admin/"
         }
     })
 
