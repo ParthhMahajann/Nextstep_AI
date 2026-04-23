@@ -365,7 +365,7 @@ textarea.input { resize: vertical; min-height: 100px; }
   transform: translateX(-50%);
   width: 100%;
   max-width: 560px;
-  z-index: 100;
+  z-index: 90;
   padding: 8px 16px 12px;
 }
 
@@ -650,12 +650,12 @@ textarea.input { resize: vertical; min-height: 100px; }
    Mobile: above bottom nav (84px). Desktop: near bottom (16px).
    ═══════════════════════════════════════════════════════════ */
 
-.ai-chat-button { bottom: 84px; }
-.ai-chat-panel  { bottom: 144px; }
+.ai-chat-button { bottom: 84px; z-index: 240; }
+.ai-chat-panel  { bottom: 144px; z-index: 250; }
 
 @media (min-width: 768px) {
-  .ai-chat-button { bottom: 16px; }
-  .ai-chat-panel  { bottom: 80px; }
+  .ai-chat-button { bottom: 24px; }
+  .ai-chat-panel  { bottom: 90px; }
 }
 
 @media (max-width: 480px) {
@@ -676,7 +676,7 @@ textarea.input { resize: vertical; min-height: 100px; }
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  z-index: 200;
+  z-index: 100;
   box-shadow: 2px 0 16px rgba(0,0,0,0.04);
   overflow-y: auto;
   overflow-x: hidden;
@@ -753,4 +753,59 @@ textarea.input { resize: vertical; min-height: 100px; }
 /* Narrow sidebar on medium screens */
 @media (min-width: 768px) and (max-width: 1023px) {
   .side-nav { width: 240px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DESKTOP HEADER — hide redundant logo mark (sidebar has it)
+   ═══════════════════════════════════════════════════════════ */
+
+/* Discover page: mobile shows brand link, desktop shows plain title */
+.discover-brand      { display: flex; }
+.discover-page-title { display: none; }
+
+@media (min-width: 768px) {
+  /* Hide red Zap icon inside sticky page headers — sidebar already shows the logo */
+  header .logo-mark { display: none !important; }
+  /* Discover page brand link → hidden on desktop */
+  .discover-brand { display: none !important; }
+  .discover-page-title { display: block; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FILTER DRAWER — side panel on desktop, bottom sheet on mobile
+   ═══════════════════════════════════════════════════════════ */
+
+.filter-drawer-backdrop {
+  position: fixed; inset: 0; z-index: 280;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+}
+
+.filter-drawer-panel {
+  position: fixed;
+  z-index: 281;
+  background: #ffffff;
+  overflow-y: auto;
+}
+
+/* Mobile: bottom sheet */
+@media (max-width: 767px) {
+  .filter-drawer-panel {
+    bottom: 0; left: 0; right: 0;
+    border-radius: 24px 24px 0 0;
+    border: 1px solid #e1e1e1; border-bottom: none;
+    max-height: 82vh;
+    padding: 8px 20px 40px;
+  }
+}
+
+/* Desktop: right side panel */
+@media (min-width: 768px) {
+  .filter-drawer-panel {
+    top: 0; right: 0; bottom: 0;
+    width: 400px;
+    border-left: 1px solid #e1e1e1;
+    box-shadow: -4px 0 32px rgba(0,0,0,0.1);
+    padding: 24px 24px 40px;
+  }
 }

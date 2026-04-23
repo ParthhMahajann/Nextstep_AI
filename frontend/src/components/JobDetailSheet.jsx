@@ -297,7 +297,7 @@ export function JobDetailSheet({ job, onClose, onApply, onSave }) {
             <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={onClose}
-                style={{ position: 'fixed', inset: 0, zIndex: 150, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+                style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
             />
 
             {/* Sheet */}
@@ -307,7 +307,7 @@ export function JobDetailSheet({ job, onClose, onApply, onSave }) {
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 310 }}
                 style={{
-                    position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 151,
+                    position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
                     background: '#ffffff',
                     border: '1px solid #e1e1e1', borderBottom: 'none',
                     borderRadius: '24px 24px 0 0',

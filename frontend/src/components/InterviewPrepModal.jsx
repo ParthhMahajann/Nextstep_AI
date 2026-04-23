@@ -116,7 +116,7 @@ export function InterviewPrepModal({ job, onClose }) {
             <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={onClose}
-                style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}
+                style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}
             />
 
             {/* Modal */}
@@ -126,7 +126,7 @@ export function InterviewPrepModal({ job, onClose }) {
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 320 }}
                 style={{
-                    position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
+                    position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 401,
                     background: '#ffffff',
                     border: '1px solid #e1e1e1',
                     borderBottom: 'none',

@@ -36,7 +36,9 @@
       "Bash(grep -v \"^$\")",
       "Bash(grep -E \"\\\\.py$\")",
       "Bash(python *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(cd /d D:\\\\Nextstep_AI\\\\frontend)",
+      "Bash(node -e ' *)"
     ]
   }
 }

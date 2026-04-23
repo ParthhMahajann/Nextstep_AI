@@ -125,7 +125,8 @@ export function DiscoverPage() {
                                 animate={{ opacity: 1 }}
                                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                             >
-                                <Link to="/discover" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+                                {/* Mobile: full brand link */}
+                                <Link to="/discover" className="discover-brand" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
                                     <div className="logo-mark" style={{ width: 36, height: 36, borderRadius: 11 }}>
                                         <Zap size={18} color="#fff" strokeWidth={2.5} />
                                     </div>
@@ -133,6 +134,8 @@ export function DiscoverPage() {
                                         NextStep<span className="text-gradient">AI</span>
                                     </span>
                                 </Link>
+                                {/* Desktop: simple title (sidebar has the brand) */}
+                                <h1 className="discover-page-title" style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>Discover</h1>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     {!isLoading && jobs.length > 0 && remaining > 0 && !searchQuery && (

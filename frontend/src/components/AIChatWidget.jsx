@@ -107,7 +107,7 @@ export function AIChatWidget() {
                             display: 'flex',
                             flexDirection: 'column',
                             overflow: 'hidden',
-                            zIndex: 200,
+                            zIndex: 250,
                             boxShadow: '0 8px 40px rgba(0,0,0,0.12)',
                         }}
                     >
@@ -276,7 +276,7 @@ export function AIChatWidget() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     boxShadow: '0 4px 16px rgba(230,0,35,0.4)',
-                    zIndex: 201,
+                    zIndex: 240,
                 }}
             >
                 <AnimatePresence mode="wait">

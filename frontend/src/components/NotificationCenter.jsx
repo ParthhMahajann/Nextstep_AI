@@ -135,7 +135,7 @@ export function NotificationCenter() {
                             borderRadius: 16,
                             overflow: 'hidden',
                             boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-                            zIndex: 300,
+                            zIndex: 150,
                         }}
                     >
                         <div style={{ padding: '12px 14px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

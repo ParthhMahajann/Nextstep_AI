@@ -79,6 +79,8 @@ export function FilterDrawer({ open, filters, onChange, onClose, onApply }) {
 
     const hasActiveFilters = Object.values(filters).some(v => v && v !== '' && v !== false);
 
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+
     return (
         <AnimatePresence>
             {open && (
@@ -87,27 +89,22 @@ export function FilterDrawer({ open, filters, onChange, onClose, onApply }) {
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         onClick={onClose}
-                        style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+                        className="filter-drawer-backdrop"
                     />
 
-                    {/* Drawer */}
+                    {/* Drawer — bottom sheet on mobile, side panel on desktop */}
                     <motion.div
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
+                        initial={isDesktop ? { x: '100%' } : { y: '100%' }}
+                        animate={isDesktop ? { x: 0 } : { y: 0 }}
+                        exit={isDesktop ? { x: '100%' } : { y: '100%' }}
                         transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                        style={{
-                            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201,
-                            background: '#ffffff',
-                            border: '1px solid #e1e1e1', borderBottom: 'none',
-                            borderRadius: '24px 24px 0 0',
-                            boxShadow: '0 -4px 32px rgba(0,0,0,0.1)',
-                            padding: '8px 20px 40px',
-                            maxHeight: '82vh', overflowY: 'auto',
-                        }}
+                        className="filter-drawer-panel"
                     >
-                        {/* Handle */}
-                        <div style={{ width: 36, height: 4, borderRadius: 99, background: '#e1e1e1', margin: '8px auto 20px' }} />
+                        {/* Handle (mobile only) */}
+                        {!isDesktop && <div style={{ width: 36, height: 4, borderRadius: 99, background: '#e1e1e1', margin: '8px auto 20px' }} />}
+
+                        {/* Desktop spacer */}
+                        {isDesktop && <div style={{ height: 8 }} />}
 
                         {/* Title */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
