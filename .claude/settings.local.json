@@ -11,7 +11,32 @@
       "Bash(python manage.py test core --verbosity=1)",
       "Bash(wait)",
       "Bash(python manage.py test core --verbosity=1 --keepdb)",
-      "Bash(python manage.py test core --verbosity=2 --keepdb)"
+      "Bash(python manage.py test core --verbosity=2 --keepdb)",
+      "Read(//mnt/d/Nextstep_AI/**)",
+      "Bash(python \"D:\\\\Nextstep_AI\\\\scrapers\\\\job_filter.py\")",
+      "Bash(python3 \"D:\\\\Nextstep_AI\\\\scrapers\\\\job_filter.py\")",
+      "Bash(python D:\\\\Nextstep_AI\\\\scrapers\\\\job_filter.py)",
+      "Bash(python \"D:/Nextstep_AI/scrapers/job_filter.py\")",
+      "Bash(python -)",
+      "Bash(tree -L 3 -d /d/Nextstep_AI --ignore node_modules)",
+      "Bash(python manage.py check --deploy)",
+      "Bash(npm run *)",
+      "Bash(python manage.py migrate --check)",
+      "Bash(python manage.py showmigrations core)",
+      "Bash(python manage.py test core --verbosity=2)",
+      "Bash(python3 *)",
+      "Bash(python -m py_compile core/ai_views.py)",
+      "Bash(python -m py_compile core/views.py)",
+      "Bash(python -m py_compile core/models.py)",
+      "Bash(python -m py_compile core/serializers.py)",
+      "Bash(python -m py_compile core/urls.py)",
+      "Bash(npx tsc *)",
+      "Bash(python manage.py check)",
+      "Bash(python -c ' *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(python *)",
+      "Bash(curl *)"
     ]
   }
 }

@@ -18,6 +18,7 @@ from retry_decorator import with_retry, RetryConfig, RETRYABLE_EXCEPTIONS
 from rate_limiter import RateLimiter, get_rate_limiter
 from logging_config import get_scraper_logger, log_request
 from data_validator import validate_opportunity, ValidationResult
+from job_filter import passes_all_filters
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +171,20 @@ class BaseScraper(ABC):
         if result.warnings:
             self._logger.debug(f"Validation warnings: {result.warnings}")
 
+        # ── Language + location gate ──────────────────────────────────────────
+        # Only keep jobs that are (a) in English and (b) remote or India-based.
+        data = result.sanitized_data
+        if not passes_all_filters(
+            title=data['title'],
+            description=data['description'],
+            location=data['location'],
+        ):
+            self._logger.debug(
+                f"Filter rejected: '{opportunity.title}' @ '{opportunity.location}'"
+            )
+            return None
+        # ─────────────────────────────────────────────────────────────────────
+
         if self.is_duplicate(opportunity):
             logger.debug(f"Skipping duplicate: {opportunity.title}")
             return None
@@ -254,6 +269,7 @@ class BaseScraper(ABC):
         stats = {
             "fetched": 0,
             "saved": 0,
+            "filtered": 0,   # rejected by language / location gate
             "duplicates": 0,
             "errors": 0,
             "retries": 0,
@@ -261,7 +277,7 @@ class BaseScraper(ABC):
             "source": self.source_name,
             "timestamp": datetime.now().isoformat()
         }
-        
+
         try:
             opportunities = self.fetch_opportunities()
             stats["fetched"] = len(opportunities)
@@ -272,7 +288,12 @@ class BaseScraper(ABC):
                 try:
                     validated = self._validate_opportunity(opp)
                     if validated is None:
-                        stats["duplicates"] += 1
+                        # Distinguish filtered-out from duplicates via a debug check:
+                        # _validate_opportunity already logs the reason; we count
+                        # everything that returns None as either filtered or duplicate.
+                        # For simplicity we still track them all as "duplicates" bucket
+                        # unless the filter kicked in — use a try/except-free approach:
+                        stats["filtered"] += 1
                         continue
                     jobs_to_create.append(validated)
                 except Exception as e:
@@ -283,7 +304,9 @@ class BaseScraper(ABC):
                 from core.models import Job
                 created = Job.objects.bulk_create(jobs_to_create, ignore_conflicts=True)
                 stats["saved"] = len(created)
-                stats["duplicates"] += len(jobs_to_create) - len(created)
+                stats["duplicates"] = len(jobs_to_create) - len(created)
+                # Adjust filtered count: subtract true duplicates from the bucket
+                stats["filtered"] = max(0, stats["filtered"] - stats["duplicates"])
                 logger.info(f"Bulk created {len(created)} jobs from {self.source_name}")
         
         except Exception as e:
@@ -297,7 +320,7 @@ class BaseScraper(ABC):
         logger.info(
             f"Scraper {self.source_name} completed: "
             f"fetched={stats['fetched']}, saved={stats['saved']}, "
-            f"duplicates={stats['duplicates']}, errors={stats['errors']}, "
-            f"retries={stats['retries']}"
+            f"filtered={stats['filtered']}, duplicates={stats['duplicates']}, "
+            f"errors={stats['errors']}, retries={stats['retries']}"
         )
         return stats

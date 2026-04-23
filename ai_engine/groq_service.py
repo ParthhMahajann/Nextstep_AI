@@ -393,7 +393,7 @@ REQUIREMENTS:
         job_description: str
     ) -> str:
         """Get tips for applying to a specific job."""
-        
+
         prompt = f"""Provide 5 specific tips for applying to this job.
 
 JOB:
@@ -410,8 +410,302 @@ For each tip:
             {"role": "system", "content": "You are a career coach. Provide practical, specific advice."},
             {"role": "user", "content": prompt}
         ]
-        
+
         return self._chat(messages, max_tokens=800)
+
+    def generate_interview_prep(
+        self,
+        job_title: str,
+        company: str,
+        job_description: str,
+        user_skills: List[str],
+        experience_level: str = "",
+    ) -> List[Dict]:
+        """
+        Generate interview Q&A pairs for a specific job.
+
+        Returns a list of dicts:
+          [{"question": "...", "answer": "...", "category": "technical|behavioural|company"}]
+        """
+        skills_str = ", ".join(user_skills[:10]) if user_skills else "general skills"
+        prompt = f"""You are an expert interview coach. Generate 8 interview questions with ideal answers
+for a candidate applying to this role.
+
+JOB:
+- Title: {job_title}
+- Company: {company}
+- Description: {job_description[:600]}
+
+CANDIDATE:
+- Skills: {skills_str}
+- Level: {experience_level or 'not specified'}
+
+Generate exactly 8 Q&A pairs — mix of technical, behavioural, and company-specific questions.
+Format your response as a numbered list ONLY, using this exact structure for each item:
+
+Q: [question text]
+A: [model answer — 2-4 sentences, first-person, concrete]
+CATEGORY: [technical|behavioural|company]
+
+---
+
+No preamble. No closing remarks. Just the 8 Q&A blocks separated by blank lines."""
+
+        messages = [
+            {"role": "system", "content": "You are an expert interview coach who gives concise, practical Q&A pairs."},
+            {"role": "user", "content": prompt},
+        ]
+
+        response = self._chat(messages, model=self.MODELS['smart'], max_tokens=2000)
+
+        pairs = []
+        current: Dict = {}
+        for line in response.split('\n'):
+            line = line.strip()
+            if line.lower().startswith('q:'):
+                if current.get('question'):
+                    pairs.append(current)
+                current = {'question': line[2:].strip(), 'answer': '', 'category': 'general'}
+            elif line.lower().startswith('a:'):
+                current['answer'] = line[2:].strip()
+            elif line.lower().startswith('category:'):
+                cat = line.split(':', 1)[1].strip().lower()
+                current['category'] = cat if cat in ('technical', 'behavioural', 'company') else 'general'
+        if current.get('question'):
+            pairs.append(current)
+
+        return pairs[:8]
+
+    def tailor_resume(
+        self,
+        resume_text: str,
+        job_title: str,
+        company: str,
+        job_description: str,
+    ) -> Dict:
+        """
+        Rewrite resume content to be better aligned with a specific job.
+
+        Returns:
+          {
+            "tailored_resume": str,   # Full rewritten resume
+            "changes": List[str],     # Bullet list of changes made
+            "ats_score_before": int,  # Estimated ATS score before (0-100)
+            "ats_score_after":  int,  # Estimated ATS score after  (0-100)
+          }
+        """
+        prompt = f"""You are a professional resume writer and ATS optimisation expert.
+
+TARGET JOB:
+- Title: {job_title}
+- Company: {company}
+- Description: {job_description[:700]}
+
+ORIGINAL RESUME:
+{resume_text[:3000]}
+
+TASK:
+1. Rewrite the resume to maximise match with the target job.
+   - Incorporate relevant keywords from the job description naturally.
+   - Strengthen bullet points with measurable impact where possible.
+   - Reorder sections/bullets so the most relevant experience appears first.
+   - Keep the same basic structure and factual content — do NOT invent experience.
+
+2. List the key changes you made (5-8 bullet points).
+
+3. Estimate ATS match score before and after the rewrite (0-100).
+
+RESPONSE FORMAT (follow exactly):
+
+TAILORED_RESUME:
+[full rewritten resume text]
+
+CHANGES:
+- [change 1]
+- [change 2]
+...
+
+ATS_BEFORE: [number]
+ATS_AFTER: [number]"""
+
+        messages = [
+            {"role": "system", "content": "You are an expert resume writer who optimises resumes for ATS and hiring managers."},
+            {"role": "user", "content": prompt},
+        ]
+
+        response = self._chat(messages, model=self.MODELS['smart'], max_tokens=3000)
+
+        tailored_resume = ""
+        changes: List[str] = []
+        ats_before = 0
+        ats_after = 0
+        current_section = None
+
+        for line in response.split('\n'):
+            stripped = line.strip()
+            upper = stripped.upper()
+
+            if upper.startswith('TAILORED_RESUME:'):
+                current_section = 'resume'
+                tail = stripped[len('TAILORED_RESUME:'):].strip()
+                if tail:
+                    tailored_resume += tail + '\n'
+            elif upper.startswith('CHANGES:'):
+                current_section = 'changes'
+            elif upper.startswith('ATS_BEFORE:'):
+                current_section = None
+                try:
+                    ats_before = int(''.join(filter(str.isdigit, stripped.split(':', 1)[1])))
+                except Exception:
+                    ats_before = 50
+            elif upper.startswith('ATS_AFTER:'):
+                current_section = None
+                try:
+                    ats_after = int(''.join(filter(str.isdigit, stripped.split(':', 1)[1])))
+                except Exception:
+                    ats_after = 75
+            elif current_section == 'resume':
+                tailored_resume += line + '\n'
+            elif current_section == 'changes' and stripped.startswith('-'):
+                changes.append(stripped[1:].strip())
+
+        return {
+            "tailored_resume": tailored_resume.strip() or resume_text,
+            "changes": changes[:8],
+            "ats_score_before": min(100, max(0, ats_before)),
+            "ats_score_after": min(100, max(0, ats_after)),
+        }
+
+
+    def research_company(
+        self,
+        company: str,
+        job_title: str = '',
+        job_description: str = '',
+    ) -> Dict:
+        """
+        Generate company research insights for a job applicant.
+
+        Returns:
+          {
+            "overview": str,
+            "culture": List[str],
+            "tech_stack": List[str],
+            "interview_format": str,
+            "tips": List[str],
+            "red_flags": List[str],
+          }
+        """
+        prompt = f"""You are a career coach helping a job applicant research a company before applying.
+
+COMPANY: {company}
+ROLE: {job_title}
+JOB DESCRIPTION EXCERPT: {job_description[:500]}
+
+Provide concise, useful research for this applicant. Use only well-known facts about this company type/sector if the specific company is not famous. Be practical and honest.
+
+RESPONSE FORMAT (follow exactly):
+
+OVERVIEW:
+[2-3 sentence company overview]
+
+CULTURE:
+- [culture point 1]
+- [culture point 2]
+- [culture point 3]
+
+TECH_STACK:
+- [technology 1]
+- [technology 2]
+- [technology 3]
+
+INTERVIEW_FORMAT:
+[2-3 sentences on typical interview process for this type of company/role]
+
+TIPS:
+- [application tip 1]
+- [application tip 2]
+- [application tip 3]
+
+RED_FLAGS:
+- [potential concern 1 or "None identified"]"""
+
+        messages = [
+            {"role": "system", "content": "You are a career intelligence analyst who gives job applicants actionable company research."},
+            {"role": "user", "content": prompt},
+        ]
+
+        response = self._chat(messages, model=self.MODELS['fast'], max_tokens=800)
+
+        result = {
+            "overview": "",
+            "culture": [],
+            "tech_stack": [],
+            "interview_format": "",
+            "tips": [],
+            "red_flags": [],
+        }
+        current = None
+
+        for line in response.split('\n'):
+            stripped = line.strip()
+            upper = stripped.upper()
+
+            if upper.startswith('OVERVIEW:'):
+                current = 'overview'
+                tail = stripped[len('OVERVIEW:'):].strip()
+                if tail:
+                    result['overview'] = tail
+            elif upper.startswith('CULTURE:'):
+                current = 'culture'
+            elif upper.startswith('TECH_STACK:'):
+                current = 'tech_stack'
+            elif upper.startswith('INTERVIEW_FORMAT:'):
+                current = 'interview_format'
+                tail = stripped[len('INTERVIEW_FORMAT:'):].strip()
+                if tail:
+                    result['interview_format'] = tail
+            elif upper.startswith('TIPS:'):
+                current = 'tips'
+            elif upper.startswith('RED_FLAGS:'):
+                current = 'red_flags'
+            elif current == 'overview' and stripped and not upper.endswith(':'):
+                result['overview'] = (result['overview'] + ' ' + stripped).strip()
+            elif current == 'interview_format' and stripped and not upper.endswith(':'):
+                result['interview_format'] = (result['interview_format'] + ' ' + stripped).strip()
+            elif current in ('culture', 'tech_stack', 'tips', 'red_flags') and stripped.startswith('-'):
+                result[current].append(stripped[1:].strip())
+
+        return result
+
+    def chat(
+        self,
+        messages: List[Dict],
+        user_context: Dict = None,
+    ) -> str:
+        """
+        Conversational AI assistant for job search questions.
+
+        messages: list of {"role": "user"|"assistant", "content": str}
+        user_context: optional dict with name, experience_level, skills, etc.
+        """
+        ctx = ""
+        if user_context:
+            ctx = f"""
+USER PROFILE:
+- Name: {user_context.get('name', 'Job seeker')}
+- Experience: {user_context.get('experience_level', 'Not specified')}
+- Skills: {', '.join(user_context.get('skills', [])) or 'Not specified'}
+- Bio: {user_context.get('bio', '')}
+"""
+
+        system_prompt = f"""You are NextStep AI, an expert career assistant helping job seekers find, prepare for, and land their next job.
+{ctx}
+Be concise, practical, and encouraging. Use bullet points when listing multiple items. Keep responses under 250 words."""
+
+        chat_messages = [{"role": "system", "content": system_prompt}] + messages
+
+        return self._chat(chat_messages, model=self.MODELS['fast'], max_tokens=400)
 
 
 # Singleton instance

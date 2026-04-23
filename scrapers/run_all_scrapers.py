@@ -324,7 +324,7 @@ class ScraperOrchestrator:
         # Per-source timing (ISSUE 2)
         logger.info("Per-Source Metrics:")
         for name, m in pm.source_metrics.items():
-            status_icon = "✓" if m.status == "success" else ("⚠" if m.status == "warning" else "✗")
+            status_icon = "[OK]" if m.status == "success" else ("[WARN]" if m.status == "warning" else "[FAIL]")
             logger.info(
                 f"  {name}: {status_icon} {m.duration}s | "
                 f"fetched={m.fetched} saved={m.saved} duplicates={m.duplicates}"

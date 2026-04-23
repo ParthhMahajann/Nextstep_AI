@@ -84,6 +84,9 @@ class UserProfile(models.Model):
     open_to_remote = models.BooleanField(default=True)
     expected_salary = models.CharField(max_length=50, blank=True, default='')
 
+    # ── ML Personalisation ────────────────────────────────────────────────────
+    liked_embedding = models.BinaryField(null=True, blank=True)  # Mean of saved-job embeddings
+
     # ── Metadata ──────────────────────────────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -218,7 +221,7 @@ class Job(models.Model):
 
 class SavedJob(models.Model):
     """Tracks jobs saved by users with application status and drafts."""
-    
+
     STATUS_CHOICES = [
         ('saved', 'Saved'),
         ('preparing', 'Preparing Application'),
@@ -227,10 +230,10 @@ class SavedJob(models.Model):
         ('rejected', 'Rejected'),
         ('accepted', 'Accepted'),
     ]
-    
+
     user_profile = models.ForeignKey(
-        UserProfile, 
-        on_delete=models.CASCADE, 
+        UserProfile,
+        on_delete=models.CASCADE,
         related_name='saved_jobs'
     )
     job = models.ForeignKey(
@@ -239,31 +242,58 @@ class SavedJob(models.Model):
         null=True,
         related_name='saved_by'
     )
-    
+
     # Application tracking
     status = models.CharField(
-        max_length=20, 
-        choices=STATUS_CHOICES, 
+        max_length=20,
+        choices=STATUS_CHOICES,
         default='saved'
     )
     notes = models.TextField(blank=True, help_text="Personal notes about this opportunity")
     email_draft = models.TextField(blank=True, help_text="AI-generated email draft")
-    
+    cover_letter = models.TextField(blank=True, help_text="AI-generated cover letter")
+
+    # Interview tracking
+    interview_date = models.DateTimeField(null=True, blank=True, help_text="Scheduled interview date/time")
+    interview_notes = models.TextField(blank=True, help_text="Notes from interview")
+    follow_up_date = models.DateField(null=True, blank=True, help_text="Reminder to follow up")
+
     # Match info (cached from ML engine)
     match_score = models.FloatField(null=True, blank=True)
     match_explanation = models.TextField(blank=True)
-    
+
     # Timestamps
     saved_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     applied_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         unique_together = ['user_profile', 'job']
         ordering = ['-saved_at']
-    
+
     def __str__(self):
         return f"{self.user_profile.user.username} - {self.job.title} ({self.status})"
+
+
+class ResumeVersion(models.Model):
+    """Stores multiple named resume versions per user."""
+
+    user_profile = models.ForeignKey(
+        UserProfile,
+        on_delete=models.CASCADE,
+        related_name='resume_versions',
+    )
+    name = models.CharField(max_length=100, help_text="e.g. 'Frontend Resume', 'ML Resume'")
+    content = models.TextField(help_text="Resume text content")
+    target_role = models.CharField(max_length=100, blank=True, help_text="Target job role")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.user_profile.user.username} — {self.name}"
 
 
 # Signal to auto-create UserProfile when User is created
@@ -311,3 +341,49 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f"PasswordReset for {self.user.username}"
+
+
+class SwipeEvent(models.Model):
+    """Records every swipe action for ML feedback signals."""
+
+    ACTION_CHOICES = [
+        ('skip', 'Skip'),
+        ('save', 'Save'),
+        ('apply', 'Apply'),
+    ]
+
+    user_profile = models.ForeignKey(
+        UserProfile, on_delete=models.CASCADE, related_name='swipe_events'
+    )
+    job = models.ForeignKey(
+        Job, on_delete=models.SET_NULL, null=True, related_name='swipe_events'
+    )
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    card_position = models.PositiveIntegerField(default=0)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user_profile', 'action']),
+            models.Index(fields=['timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.user_profile.user.username} {self.action} job#{self.job_id}"
+
+
+@receiver(post_save, sender=SavedJob)
+def update_user_taste_vector(sender, instance, created, **kwargs):
+    """Recompute taste vector whenever a user saves/progresses a job."""
+    if instance.status not in ('saved', 'preparing', 'applied', 'interviewing', 'accepted'):
+        return
+    try:
+        import sys
+        from pathlib import Path
+        ml_path = str(Path(__file__).resolve().parent.parent.parent / 'ml_engine')
+        if ml_path not in sys.path:
+            sys.path.insert(0, ml_path)
+        from personalization import store_user_taste_vector
+        store_user_taste_vector(instance.user_profile)
+    except Exception:
+        pass

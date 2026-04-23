@@ -4,6 +4,8 @@ URL configuration for NextStep AI project.
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
+from django.conf import settings
+from django.conf.urls.static import static
 
 
 def api_root(request):
@@ -17,6 +19,7 @@ def api_root(request):
             "jobs": "/api/jobs/",
             "skills": "/api/skills/",
             "saved_jobs": "/api/saved-jobs/",
+            "ai": "/api/ai/",
         }
     })
 
@@ -26,4 +29,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('core.urls')),
 ]
+
+# Serve uploaded media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

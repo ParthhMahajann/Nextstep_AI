@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Job, Skill, UserProfile, UserSkill, SavedJob
+from .models import Job, Skill, UserProfile, UserSkill, SavedJob, ResumeVersion
 
 
 # ==================== Auth Serializers ====================
@@ -218,7 +218,7 @@ class JobWithMatchSerializer(JobDetailSerializer):
 
 class SavedJobSerializer(serializers.ModelSerializer):
     """Serializer for saved jobs."""
-    
+
     job = JobListSerializer(read_only=True)
     job_id = serializers.PrimaryKeyRelatedField(
         queryset=Job.objects.all(),
@@ -226,28 +226,49 @@ class SavedJobSerializer(serializers.ModelSerializer):
         write_only=True
     )
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    
+
     class Meta:
         model = SavedJob
         fields = [
             'id', 'job', 'job_id', 'status', 'status_display',
-            'notes', 'email_draft', 'match_score', 'match_explanation',
-            'saved_at', 'updated_at', 'applied_at'
+            'notes', 'email_draft', 'cover_letter',
+            'interview_date', 'interview_notes', 'follow_up_date',
+            'match_score', 'match_explanation',
+            'saved_at', 'updated_at', 'applied_at',
         ]
         read_only_fields = ['id', 'saved_at', 'updated_at']
 
 
 class SavedJobCreateSerializer(serializers.ModelSerializer):
     """Serializer for saving a job."""
-    
+
     class Meta:
         model = SavedJob
-        fields = ['job', 'notes']
+        fields = ['job', 'notes', 'status']
+        extra_kwargs = {
+            'status': {'required': False},
+            'notes': {'required': False},
+        }
 
 
 class SavedJobUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating saved job status."""
-    
+    """Serializer for updating saved job fields."""
+
     class Meta:
         model = SavedJob
-        fields = ['status', 'notes', 'email_draft', 'applied_at']
+        fields = [
+            'status', 'notes', 'email_draft', 'cover_letter',
+            'interview_date', 'interview_notes', 'follow_up_date',
+            'applied_at',
+        ]
+
+
+# ==================== Resume Version Serializers ====================
+
+class ResumeVersionSerializer(serializers.ModelSerializer):
+    """Serializer for resume versions."""
+
+    class Meta:
+        model = ResumeVersion
+        fields = ['id', 'name', 'content', 'target_role', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']

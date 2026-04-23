@@ -27,6 +27,24 @@ export const useAuthStore = create(
                     // Fetch user profile
                     await get().fetchUser();
 
+                    // Apply profile data saved during the signup wizard, if any.
+                    // The wizard stores it in sessionStorage because the user was
+                    // inactive (awaiting email verification) at registration time.
+                    const pendingRaw = sessionStorage.getItem('pending_profile');
+                    if (pendingRaw) {
+                        try {
+                            const pendingProfile = JSON.parse(pendingRaw);
+                            await profileAPI.update(pendingProfile);
+                            sessionStorage.removeItem('pending_profile');
+                            sessionStorage.removeItem('pending_resume_filename');
+                            // Refresh profile state with the newly applied data
+                            await get().fetchUser();
+                        } catch (profileErr) {
+                            // Non-fatal — user can fill in profile manually
+                            console.warn('Could not apply pending profile data:', profileErr);
+                        }
+                    }
+
                     set({ isAuthenticated: true, isLoading: false, pendingVerificationEmail: null });
                     return true;
                 } catch (error) {
@@ -64,15 +82,6 @@ export const useAuthStore = create(
                     });
                     return false;
                 }
-            },
-
-            // Update profile after registration (called with extended profile data)
-            updateProfileAfterRegister: async (profileData) => {
-                // We need a temporary login to get a token for the PATCH call.
-                // Since the user is inactive, we skip this and store data locally for after verification.
-                // Instead: just store in pendingProfileData – profile will be patched on first real login.
-                set({ pendingProfileData: profileData });
-                return true;
             },
 
             // Fetch current user
@@ -167,16 +176,25 @@ export const useAuthStore = create(
             },
 
             // Logout
-            logout: () => {
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
-                set({
-                    user: null,
-                    profile: null,
-                    isAuthenticated: false,
-                    error: null,
-                    pendingVerificationEmail: null,
-                });
+            logout: async () => {
+                try {
+                    const refresh = localStorage.getItem('refresh_token');
+                    if (refresh) {
+                        await authAPI.logout({ refresh });
+                    }
+                } catch (_) {
+                    // Silently ignore — always clear local state
+                } finally {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    set({
+                        user: null,
+                        profile: null,
+                        isAuthenticated: false,
+                        error: null,
+                        pendingVerificationEmail: null,
+                    });
+                }
             },
 
             // Clear error

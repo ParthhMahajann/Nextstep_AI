@@ -1,11 +1,11 @@
 /**
- * Email verification page — reads ?token= from URL and calls the API.
+ * Email verification page — 2026 dark glassmorphism design
  */
 
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, Loader, ArrowRight, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle, XCircle, ArrowRight, RefreshCw, Zap } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 export function VerifyEmailPage() {
@@ -40,71 +40,114 @@ export function VerifyEmailPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-6">
+        <div style={{
+            minHeight: '100dvh',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24, position: 'relative', zIndex: 1,
+        }}>
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                style={{ width: '100%', maxWidth: '440px' }}
+                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                style={{ width: '100%', maxWidth: 440 }}
             >
-                <div className="glass" style={{ borderRadius: '20px', padding: '48px 36px', textAlign: 'center' }}>
-                    {status === 'loading' && (
-                        <>
-                            <Loader size={48} color="#6366f1" className="animate-spin" style={{ margin: '0 auto 20px' }} />
-                            <h2 style={{ color: '#fff', fontSize: '20px', fontWeight: 700 }}>Verifying your email…</h2>
-                            <p style={{ color: '#94a3b8', marginTop: '8px' }}>Just a moment</p>
-                        </>
-                    )}
+                {/* Logo */}
+                <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                        <div className="logo-mark" style={{ width: 36, height: 36, borderRadius: 11 }}>
+                            <Zap size={18} color="#fff" strokeWidth={2.5} />
+                        </div>
+                        <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                            NextStep<span className="text-gradient">AI</span>
+                        </span>
+                    </div>
+                </div>
 
-                    {status === 'success' && (
-                        <>
-                            <div style={{
-                                width: 72, height: 72, borderRadius: '50%', margin: '0 auto 20px',
-                                background: 'rgba(34,197,94,0.15)', border: '2px solid rgba(34,197,94,0.4)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                                <CheckCircle size={36} color="#22c55e" />
-                            </div>
-                            <h2 style={{ color: '#fff', fontSize: '24px', fontWeight: 700, marginBottom: '12px' }}>
-                                Email Verified! 🎉
-                            </h2>
-                            <p style={{ color: '#94a3b8', marginBottom: '32px', lineHeight: 1.6 }}>
-                                Your account is now active. Sign in to start exploring opportunities.
-                            </p>
-                            <Link to="/login" className="btn btn-primary" style={{ display: 'inline-flex', gap: '8px', textDecoration: 'none' }}>
-                                Go to Login <ArrowRight size={18} />
-                            </Link>
-                        </>
-                    )}
+                <div className="glass-card" style={{ padding: '48px 36px', textAlign: 'center' }}>
+                    <AnimatePresence mode="wait">
+                        {status === 'loading' && (
+                            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                                <div style={{ marginBottom: 24 }}>
+                                    <div className="ai-pulse" style={{ justifyContent: 'center' }}>
+                                        <div className="ai-pulse-dot" />
+                                        <div className="ai-pulse-dot" />
+                                        <div className="ai-pulse-dot" />
+                                    </div>
+                                </div>
+                                <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                    Verifying your email…
+                                </h2>
+                                <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 14 }}>Just a moment</p>
+                            </motion.div>
+                        )}
 
-                    {status === 'error' && (
-                        <>
-                            <div style={{
-                                width: 72, height: 72, borderRadius: '50%', margin: '0 auto 20px',
-                                background: 'rgba(239,68,68,0.15)', border: '2px solid rgba(239,68,68,0.3)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                                <XCircle size={36} color="#ef4444" />
-                            </div>
-                            <h2 style={{ color: '#fff', fontSize: '22px', fontWeight: 700, marginBottom: '12px' }}>
-                                Verification Failed
-                            </h2>
-                            <p style={{ color: '#94a3b8', marginBottom: '28px', lineHeight: 1.6 }}>{message}</p>
-
-                            {pendingVerificationEmail && !resent && (
-                                <button onClick={handleResend} className="btn btn-outline" style={{ width: '100%', gap: '8px', marginBottom: '16px' }}>
-                                    <RefreshCw size={16} /> Resend verification email
-                                </button>
-                            )}
-                            {resent && (
-                                <p style={{ color: '#22c55e', fontWeight: 600, marginBottom: '16px' }}>
-                                    ✓ New verification email sent!
+                        {status === 'success' && (
+                            <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+                                <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: 'spring', stiffness: 300, delay: 0.1 }}
+                                    style={{
+                                        width: 80, height: 80, borderRadius: '50%', margin: '0 auto 24px',
+                                        background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}
+                                >
+                                    <CheckCircle size={38} color="#4ade80" />
+                                </motion.div>
+                                <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>
+                                    Email Verified!
+                                </h2>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: 32, lineHeight: 1.6, fontSize: 14 }}>
+                                    Your account is now active. Sign in to start exploring opportunities.
                                 </p>
-                            )}
-                            <Link to="/login" style={{ color: '#94a3b8', fontSize: '14px', textDecoration: 'none' }}>
-                                Back to Login
-                            </Link>
-                        </>
-                    )}
+                                <Link to="/login" className="btn btn-primary"
+                                    style={{ display: 'inline-flex', gap: 8, textDecoration: 'none', padding: '13px 28px', fontSize: 15 }}>
+                                    Go to Login <ArrowRight size={16} />
+                                </Link>
+                            </motion.div>
+                        )}
+
+                        {status === 'error' && (
+                            <motion.div key="error" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+                                <div style={{
+                                    width: 80, height: 80, borderRadius: '50%', margin: '0 auto 24px',
+                                    background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <XCircle size={38} color="#f87171" />
+                                </div>
+                                <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>
+                                    Verification Failed
+                                </h2>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: 28, lineHeight: 1.6, fontSize: 14 }}>
+                                    {message}
+                                </p>
+
+                                {pendingVerificationEmail && !resent && (
+                                    <button onClick={handleResend} style={{
+                                        width: '100%', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                        padding: '12px 20px', borderRadius: 14, cursor: 'pointer',
+                                        background: '#f3f3f3', border: '1px solid #e1e1e1',
+                                        color: 'var(--text-secondary)', fontWeight: 600, fontSize: 14,
+                                    }}>
+                                        <RefreshCw size={15} /> Resend verification email
+                                    </button>
+                                )}
+                                {resent && (
+                                    <p style={{ color: '#00a86b', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                        <CheckCircle size={16} /> New verification email sent!
+                                    </p>
+                                )}
+                                <Link to="/login" style={{ color: 'var(--text-muted)', fontSize: 14, textDecoration: 'none' }}
+                                    onMouseOver={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                    onMouseOut={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                                >
+                                    Back to Login
+                                </Link>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </motion.div>
         </div>

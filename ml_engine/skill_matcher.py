@@ -118,10 +118,11 @@ class SkillMatcher:
         return self.encode([profile_text])[0]
     
     def compute_skill_match(
-        self, 
-        user_skills: List[str], 
+        self,
+        user_skills: List[str],
         job_description: str,
-        job_required_skills: Optional[List[str]] = None
+        job_required_skills: Optional[List[str]] = None,
+        job_embedding: Optional[np.ndarray] = None,
     ) -> Dict:
         """
         Compute skill match between user and job.
@@ -142,9 +143,9 @@ class SkillMatcher:
                 'explanation': "No skills provided in profile"
             }
         
-        # Get embeddings
+        # Get embeddings — use pre-computed job embedding when available
         user_profile_emb = self.encode_user_profile(user_skills)
-        job_emb = self.encode([job_description])[0]
+        job_emb = job_embedding if job_embedding is not None else self.encode([job_description])[0]
         
         # Compute overall semantic similarity
         from sklearn.metrics.pairwise import cosine_similarity

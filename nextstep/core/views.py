@@ -16,7 +16,8 @@ from django.utils.html import strip_tags
 from django.conf import settings
 from django.db.models import Q
 
-from .models import Job, Skill, UserProfile, UserSkill, SavedJob, EmailVerificationToken, PasswordResetToken
+from django.db.models import Count, Q
+from .models import Job, Skill, UserProfile, UserSkill, SavedJob, ResumeVersion, EmailVerificationToken, PasswordResetToken, SwipeEvent
 from .serializers import (
     UserRegistrationSerializer,
     UserSerializer,
@@ -31,6 +32,7 @@ from .serializers import (
     SavedJobSerializer,
     SavedJobCreateSerializer,
     SavedJobUpdateSerializer,
+    ResumeVersionSerializer,
     VerifyEmailSerializer,
     ResendVerificationSerializer,
     PasswordResetRequestSerializer,
@@ -318,19 +320,19 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        """Get current user's profile."""
-        profile = (
+        """Get current user's profile, auto-creating it if missing."""
+        profile, _ = (
             UserProfile.objects
             .select_related('user')
             .prefetch_related('skills__skill')
-            .get(user=request.user)
+            .get_or_create(user=request.user)
         )
         serializer = UserProfileSerializer(profile)
         return Response(serializer.data)
-    
+
     def patch(self, request):
         """Update current user's profile. Supports multipart/form-data for resume_file."""
-        profile = request.user.profile
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
         # Pass request.FILES so resume_file upload works with multipart requests
         serializer = UserProfileUpdateSerializer(
             profile,
@@ -340,7 +342,15 @@ class ProfileView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return Response(UserProfileSerializer(profile, context={'request': request}).data)
+            # Re-fetch with proper relations so the response serializer
+            # doesn't trigger N+1 queries on skills.
+            updated_profile = (
+                UserProfile.objects
+                .select_related('user')
+                .prefetch_related('skills__skill')
+                .get(pk=profile.pk)
+            )
+            return Response(UserProfileSerializer(updated_profile, context={'request': request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -395,51 +405,143 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
     def recommended(self, request):
         """Get AI-recommended jobs based on user profile and skills."""
         from .matching import get_matching_service
-        
-        user_profile = request.user.profile
-        matching_service = get_matching_service()
-        
-        # Get ML-ranked jobs
-        ranked_jobs = matching_service.get_recommended_jobs(
-            user_profile=user_profile,
-            queryset=self.get_queryset(),
-            limit=50
-        )
-        
-        # Return with match scores
-        return Response({
-            'count': len(ranked_jobs),
-            'results': ranked_jobs
-        })
-    
+
+        try:
+            user_profile = request.user.profile
+            matching_service = get_matching_service()
+            ranked_jobs = matching_service.get_recommended_jobs(
+                user_profile=user_profile,
+                queryset=self.get_queryset(),
+                limit=50,
+            )
+        except Exception:
+            logger.exception("Recommendation engine failed for user %s; falling back to recency", request.user.id)
+            # Fallback: return the 50 most-recent active jobs ordered by date
+            qs = self.get_queryset().order_by('-scraped_at')[:50]
+            ranked_jobs = JobListSerializer(qs, many=True, context={'request': request}).data
+
+        return Response({'count': len(ranked_jobs), 'results': ranked_jobs})
+
     @action(detail=True, methods=['get'])
     def match_score(self, request, pk=None):
         """Get detailed match score for a specific job."""
         from .matching import get_matching_service
-        
+
         job = self.get_object()
-        user_profile = request.user.profile
-        matching_service = get_matching_service()
-        
-        match_info = matching_service.compute_job_match(
-            user_profile=user_profile,
-            job=job
+        try:
+            user_profile = request.user.profile
+            matching_service = get_matching_service()
+            match_info = matching_service.compute_job_match(
+                user_profile=user_profile,
+                job=job,
+            )
+        except Exception:
+            logger.exception("match_score failed for job %s user %s", job.id, request.user.id)
+            match_info = {'match_score': None, 'matched_skills': [], 'explanation': 'Matching unavailable'}
+
+        return Response({'job_id': job.id, 'job_title': job.title, **match_info})
+
+    @action(detail=True, methods=['get'])
+    def skill_gap(self, request, pk=None):
+        """Return skill gap analysis: user skills vs. job required/AI skills."""
+        job = self.get_object()
+        profile = request.user.profile
+
+        user_skill_names = set(
+            profile.skills.values_list('skill__name', flat=True)
         )
-        
+
+        # Combine DB required skills and AI-extracted skills
+        required_db = set(job.required_skills.values_list('name', flat=True))
+        required_ai = set(s.strip() for s in (job.ai_skills or []) if s.strip())
+        all_required = required_db | required_ai
+
+        matched = sorted(all_required & user_skill_names)
+        missing = sorted(all_required - user_skill_names)
+
+        match_pct = round(len(matched) / len(all_required) * 100) if all_required else 0
+
         return Response({
             'job_id': job.id,
             'job_title': job.title,
-            **match_info
+            'company': job.company,
+            'matched_skills': matched,
+            'missing_skills': missing,
+            'total_required': len(all_required),
+            'match_percentage': match_pct,
         })
+
+    @action(detail=True, methods=['post'])
+    def skip(self, request, pk=None):
+        """Record a skip (swipe-left) event for ML feedback."""
+        job = self.get_object()
+        try:
+            SwipeEvent.objects.create(
+                user_profile=request.user.profile,
+                job=job,
+                action='skip',
+                card_position=request.data.get('card_position', 0),
+            )
+        except Exception:
+            logger.warning("SwipeEvent creation failed for job %s user %s", job.id, request.user.id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['get'])
+    def similar(self, request, pk=None):
+        """Return up to 8 jobs with embeddings most similar to this job."""
+        import sys
+        from pathlib import Path
+        ml_path = str(Path(__file__).resolve().parent.parent.parent / 'ml_engine')
+        if ml_path not in sys.path:
+            sys.path.insert(0, ml_path)
+
+        job = self.get_object()
+        if not job.embedding:
+            return Response({'results': []})
+
+        try:
+            from embedding_store import deserialize_embedding
+            from sklearn.metrics.pairwise import cosine_similarity
+            import numpy as np
+
+            target_emb = deserialize_embedding(job.embedding)
+
+            # Already-saved job IDs to exclude
+            saved_ids = set(
+                SavedJob.objects.filter(user_profile=request.user.profile)
+                .values_list('job_id', flat=True)
+            )
+            saved_ids.add(job.id)
+
+            candidates = list(
+                Job.objects.filter(is_active=True)
+                .exclude(id__in=saved_ids)
+                .exclude(embedding__isnull=True)
+                .order_by('-scraped_at')[:500]
+            )
+
+            if not candidates:
+                return Response({'results': []})
+
+            embs = np.array([deserialize_embedding(c.embedding) for c in candidates])
+            sims = cosine_similarity(target_emb.reshape(1, -1), embs)[0]
+            top_indices = sims.argsort()[::-1][:8]
+            top_jobs = [candidates[i] for i in top_indices]
+
+            serializer = JobListSerializer(top_jobs, many=True, context={'request': request})
+            return Response({'results': serializer.data})
+        except Exception as e:
+            logger.warning(f"similar jobs failed for job {job.id}: {e}")
+            return Response({'results': []})
 
 
 # ==================== Saved Job Views ====================
 
 class SavedJobViewSet(viewsets.ModelViewSet):
     """Manage saved jobs for the current user."""
-    
+
     permission_classes = [IsAuthenticated]
-    
+
     def get_queryset(self):
         return (
             SavedJob.objects
@@ -447,25 +549,174 @@ class SavedJobViewSet(viewsets.ModelViewSet):
             .select_related('job')
             .prefetch_related('job__required_skills')
         )
-    
+
     def get_serializer_class(self):
         if self.action == 'create':
             return SavedJobCreateSerializer
         elif self.action in ['update', 'partial_update']:
             return SavedJobUpdateSerializer
         return SavedJobSerializer
-    
-    def perform_create(self, serializer):
-        serializer.save(user_profile=self.request.user.profile)
-    
+
+    def create(self, request, *args, **kwargs):
+        """
+        Save a job. Uses get_or_create so swiping the same job twice
+        (e.g. after a reload) updates its status instead of returning 400.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        profile = request.user.profile
+        job = serializer.validated_data['job']
+        new_status = serializer.validated_data.get('status', 'saved')
+        notes = serializer.validated_data.get('notes', '')
+
+        saved_job, created = SavedJob.objects.get_or_create(
+            user_profile=profile,
+            job=job,
+            defaults={'status': new_status, 'notes': notes},
+        )
+
+        if not created:
+            # Update fields if the record already exists
+            saved_job.status = new_status
+            if notes:
+                saved_job.notes = notes
+            saved_job.save(update_fields=['status', 'notes', 'updated_at'])
+
+        # Record swipe event for ML feedback
+        swipe_action = 'apply' if new_status in ('applied', 'interviewing', 'accepted') else 'save'
+        SwipeEvent.objects.get_or_create(
+            user_profile=profile,
+            job=job,
+            action=swipe_action,
+            defaults={'card_position': 0},
+        )
+
+        response_serializer = SavedJobSerializer(saved_job, context={'request': request})
+        http_status = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(response_serializer.data, status=http_status)
+
     @action(detail=True, methods=['post'])
     def generate_email(self, request, pk=None):
         """Generate AI cold-outreach email for a saved job."""
         from .ai_views import GenerateEmailView
 
         saved_job = self.get_object()
-        # Inject job_id so the AI view knows which job to target.
-        # request.data is a plain dict for JSON requests (mutable).
-        request._full_data = dict(request.data)
-        request._full_data['job_id'] = saved_job.job_id
+        request._data = {**dict(request.data), 'job_id': saved_job.job_id}
         return GenerateEmailView().post(request)
+
+    @action(detail=False, methods=['get'])
+    def analytics(self, request):
+        """Return application pipeline analytics for the current user."""
+        qs = self.get_queryset()
+
+        status_counts = {
+            item['status']: item['count']
+            for item in qs.values('status').annotate(count=Count('id'))
+        }
+
+        all_statuses = ['saved', 'preparing', 'applied', 'interviewing', 'rejected', 'accepted']
+        pipeline = {s: status_counts.get(s, 0) for s in all_statuses}
+
+        total = sum(pipeline.values())
+        applied = pipeline['applied'] + pipeline['interviewing'] + pipeline['rejected'] + pipeline['accepted']
+        interviews = pipeline['interviewing'] + pipeline['accepted']
+        offers = pipeline['accepted']
+
+        # Response rate: interviews / applied (if any)
+        response_rate = round(interviews / applied * 100) if applied else 0
+        offer_rate = round(offers / applied * 100) if applied else 0
+
+        # Most common missing skills across saved jobs (from AI skills field)
+        from collections import Counter
+        skill_counter: Counter = Counter()
+        for sj in qs.select_related('job'):
+            if sj.job and sj.job.ai_skills:
+                skill_counter.update(sj.job.ai_skills)
+
+        top_skills = [{'skill': s, 'count': c} for s, c in skill_counter.most_common(10)]
+
+        return Response({
+            'total': total,
+            'pipeline': pipeline,
+            'applied_total': applied,
+            'interviews': interviews,
+            'offers': offers,
+            'response_rate': response_rate,
+            'offer_rate': offer_rate,
+            'top_skills_in_pipeline': top_skills,
+        })
+
+
+# ==================== Resume Version Views ====================
+
+class ResumeVersionViewSet(viewsets.ModelViewSet):
+    """CRUD for user resume versions."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = ResumeVersionSerializer
+
+    def get_queryset(self):
+        return ResumeVersion.objects.filter(user_profile=self.request.user.profile)
+
+    def perform_create(self, serializer):
+        serializer.save(user_profile=self.request.user.profile)
+
+
+# ==================== ML Personalisation Views ====================
+
+class SkillSuggestionsView(APIView):
+    """Return skills that appear in saved jobs but not in the user's profile."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from collections import Counter
+        profile = request.user.profile
+        user_skills = set(profile.skills.values_list('skill__name', flat=True))
+
+        counter: Counter = Counter()
+        for sj in SavedJob.objects.filter(user_profile=profile).select_related('job'):
+            if sj.job and sj.job.ai_skills:
+                for skill in sj.job.ai_skills:
+                    s = skill.strip()
+                    if s and s.lower() not in {u.lower() for u in user_skills}:
+                        counter[s] += 1
+
+        suggestions = [
+            {'skill': skill, 'frequency': count, 'message': f'Appears in {count} of your saved jobs'}
+            for skill, count in counter.most_common(5)
+        ]
+        return Response({'suggestions': suggestions})
+
+
+class TasteProfileView(APIView):
+    """Return a summary of the user's inferred job taste vector."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from collections import Counter
+        profile = request.user.profile
+        saved = SavedJob.objects.filter(
+            user_profile=profile,
+            status__in=['saved', 'preparing', 'applied', 'interviewing', 'accepted'],
+        ).select_related('job')
+
+        role_counter: Counter = Counter()
+        skill_counter: Counter = Counter()
+        for sj in saved:
+            if sj.job:
+                if sj.job.role_type:
+                    role_counter[sj.job.role_type] += 1
+                for s in (sj.job.ai_skills or []):
+                    skill_counter[s.strip()] += 1
+
+        return Response({
+            'has_taste_vector': bool(profile.liked_embedding),
+            'total_saved_jobs': saved.count(),
+            'preferred_role_types': [
+                {'role': r, 'count': c} for r, c in role_counter.most_common(5)
+            ],
+            'top_skills': [s for s, _ in skill_counter.most_common(10)],
+        })

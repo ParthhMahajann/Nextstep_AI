@@ -64,9 +64,22 @@ class MatchingService:
         
         jobs_qs = queryset.prefetch_related('required_skills')[:limit * 2]
         
+        # Load embedding helpers
+        try:
+            from embedding_store import deserialize_embedding
+            _have_emb_store = True
+        except ImportError:
+            _have_emb_store = False
+
         # Convert to dicts for ML engine
         jobs_data = []
         for job in jobs_qs:
+            cached_emb = None
+            if _have_emb_store and job.embedding:
+                try:
+                    cached_emb = deserialize_embedding(job.embedding)
+                except Exception:
+                    pass
             jobs_data.append({
                 'id': job.id,
                 'title': job.title,
@@ -74,10 +87,13 @@ class MatchingService:
                 'location': job.location,
                 'description': job.description,
                 'job_type': job.job_type,
+                'role_type': job.role_type,
+                'experience_level': job.experience_level,
                 'apply_link': job.apply_link,
                 'source': job.source,
                 'scraped_at': job.scraped_at.isoformat() if job.scraped_at else None,
                 'required_skills': [s.name for s in job.required_skills.all()],
+                'cached_embedding': cached_emb,
             })
         
         if not jobs_data:
@@ -91,13 +107,31 @@ class MatchingService:
         # If ML engine available, use it
         if self.ranking_service:
             try:
+                # Load taste vector
+                user_taste_vector = None
+                if _have_emb_store and getattr(user_profile, 'liked_embedding', None):
+                    try:
+                        user_taste_vector = deserialize_embedding(user_profile.liked_embedding)
+                    except Exception:
+                        pass
+
+                # Load skip penalties
+                skip_penalties = {}
+                try:
+                    from feedback_analyzer import compute_skip_penalties
+                    skip_penalties = compute_skip_penalties(user_profile)
+                except Exception:
+                    pass
+
                 ranked = self.ranking_service.rank_jobs_for_user(
                     jobs=jobs_data,
                     user_skills=user_skills,
                     user_bio=user_profile.bio or "",
                     preferred_job_types=user_profile.preferred_job_types or [],
                     preferred_locations=user_profile.preferred_locations or [],
-                    top_n=limit
+                    top_n=limit,
+                    user_taste_vector=user_taste_vector,
+                    skip_penalties=skip_penalties,
                 )
                 return ranked
             except Exception as e:

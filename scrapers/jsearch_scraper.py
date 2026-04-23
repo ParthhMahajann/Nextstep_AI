@@ -48,16 +48,25 @@ class JSearchScraper(BaseScraper):
 
     API_URL = "https://jsearch.p.rapidapi.com/search"
 
-    # Queries tuned for entry-level / internship / remote roles
+    # Queries tuned for India / remote English-language roles
     DEFAULT_QUERIES = [
-        "software engineer internship remote",
+        # Remote-first queries
+        "software engineer remote",
         "junior developer remote",
-        "frontend developer entry level",
-        "backend developer internship",
-        "data analyst entry level remote",
-        "full stack developer junior",
-        "python developer internship",
-        "react developer junior remote",
+        "frontend developer remote",
+        "backend developer remote entry level",
+        "full stack developer remote",
+        "python developer remote",
+        "react developer remote",
+        "data analyst remote",
+        # India-based queries
+        "software engineer India",
+        "junior developer Bangalore",
+        "frontend developer Mumbai",
+        "backend developer Hyderabad",
+        "software intern India",
+        "data science India",
+        "full stack developer India",
     ]
 
     JOB_TYPE_MAP = {
@@ -160,11 +169,17 @@ class JSearchScraper(BaseScraper):
         """Fetch one page of results for a single query."""
         self._respect_rate_limit()
 
+        # Append "remote OR India" hint to queries that don't already have it
+        q_lower = query.lower()
+        if "india" not in q_lower and "remote" not in q_lower:
+            query = f"{query} remote OR India"
+
         params = {
             "query": query,
             "page": str(page),
             "num_pages": "1",
             "date_posted": "month",   # Jobs posted in the last month
+            "language": "en",         # English job postings only
         }
 
         try:
@@ -228,6 +243,17 @@ class JSearchScraper(BaseScraper):
                     continue  # De-duplicate within this run
                 if job_id:
                     seen_job_ids.add(job_id)
+
+                # Pre-filter: skip jobs that are neither remote nor India-based.
+                # The centralised job_filter in BaseScraper will also catch these,
+                # but doing it here avoids building the full OpportunityData object.
+                country  = (item.get("job_country") or "").lower().strip()
+                is_remote = item.get("job_is_remote", False)
+                city      = (item.get("job_city")    or "").lower().strip()
+                state     = (item.get("job_state")   or "").lower().strip()
+                if not is_remote and country not in ("india", "in", ""):
+                    if "india" not in city and "india" not in state:
+                        continue
 
                 try:
                     opp = self._build_opportunity(item)

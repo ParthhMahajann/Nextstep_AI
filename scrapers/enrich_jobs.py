@@ -109,6 +109,21 @@ def enrich_jobs(limit: int = None, dry_run: bool = False, reset: bool = False):
                     'ai_summary', 'ai_skills', 'experience_level',
                     'role_type', 'is_enriched', 'updated_at'
                 ])
+
+                # Fire-and-forget: compute embedding if not already present
+                if not job.embedding:
+                    try:
+                        import sys as _sys
+                        from pathlib import Path as _Path
+                        _ml = str(_Path(__file__).resolve().parent.parent / 'ml_engine')
+                        if _ml not in _sys.path:
+                            _sys.path.insert(0, _ml)
+                        from skill_matcher import get_skill_matcher
+                        from embedding_store import build_job_text, serialize_embedding
+                        vec = get_skill_matcher().encode([build_job_text(job)])[0]
+                        Job.objects.filter(pk=job.pk).update(embedding=serialize_embedding(vec))
+                    except Exception as _e:
+                        logger.debug(f"Embedding skipped for job {job.pk}: {_e}")
                 
                 success += 1
                 skills_str = ', '.join(enrichment.skills[:5])

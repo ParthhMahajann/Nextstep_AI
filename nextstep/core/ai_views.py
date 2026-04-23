@@ -29,6 +29,14 @@ from .ai_serializers import (
     ResumeAnalysisResponseSerializer,
     CoverLetterSerializer,
     ApplicationTipsSerializer,
+    InterviewPrepSerializer,
+    InterviewPrepResponseSerializer,
+    TailorResumeSerializer,
+    TailorResumeResponseSerializer,
+    CompanyResearchSerializer,
+    CompanyResearchResponseSerializer,
+    AIChatSerializer,
+    AIChatResponseSerializer,
 )
 
 
@@ -268,47 +276,233 @@ class ApplicationTipsView(APIView):
 
     permission_classes = [IsAuthenticated]
     throttle_classes = [AIRateThrottle]
-    
+
     def post(self, request):
         serializer = ApplicationTipsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        
-        # Get job details
+
         job = None
         if data.get('job_id'):
             try:
                 job = Job.objects.get(id=data['job_id'])
             except Job.DoesNotExist:
-                return Response(
-                    {'error': 'Job not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        
+                return Response({'error': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
+
         job_title = job.title if job else data.get('job_title', '')
         company = job.company if job else data.get('company', '')
         description = job.description if job else data.get('job_description', '')
-        
+
         try:
             from groq_service import get_ai_service
             ai_service = get_ai_service()
-            
             tips = ai_service.get_application_tips(
-                job_title=job_title,
-                company=company,
-                job_description=description
+                job_title=job_title, company=company, job_description=description
             )
-            
             return Response({'tips': tips})
-            
         except ValueError as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
             logger.exception("AI application tips failed for user %s", request.user.id)
             return Response(
                 {'error': 'AI service temporarily unavailable. Please try again later.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+
+class InterviewPrepView(APIView):
+    """Generate interview Q&A for a specific job."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [AIRateThrottle]
+
+    def post(self, request):
+        serializer = InterviewPrepSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        job = None
+        if data.get('job_id'):
+            try:
+                job = Job.objects.get(id=data['job_id'])
+            except Job.DoesNotExist:
+                return Response({'error': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        job_title = job.title if job else data.get('job_title', '')
+        company = job.company if job else data.get('company', '')
+        description = job.description if job else data.get('job_description', '')
+
+        profile = request.user.profile
+        user_skills = list(profile.skills.values_list('skill__name', flat=True))
+
+        try:
+            from groq_service import get_ai_service
+            ai_service = get_ai_service()
+            questions = ai_service.generate_interview_prep(
+                job_title=job_title,
+                company=company,
+                job_description=description,
+                user_skills=user_skills,
+                experience_level=profile.experience_level,
+            )
+            response_serializer = InterviewPrepResponseSerializer({
+                'questions': questions,
+                'job_title': job_title,
+                'company': company,
+            })
+            return Response(response_serializer.data)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Interview prep failed for user %s", request.user.id)
+            return Response(
+                {'error': 'AI service temporarily unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+
+class TailorResumeView(APIView):
+    """AI-tailor a resume for a specific job."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [AIRateThrottle]
+
+    def post(self, request):
+        from .models import ResumeVersion
+        serializer = TailorResumeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        # Resolve resume text
+        resume_text = data.get('resume_text', '')
+        if not resume_text and data.get('resume_version_id'):
+            try:
+                rv = ResumeVersion.objects.get(
+                    id=data['resume_version_id'],
+                    user_profile=request.user.profile,
+                )
+                resume_text = rv.content
+            except ResumeVersion.DoesNotExist:
+                return Response({'error': 'Resume version not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not resume_text:
+            profile = request.user.profile
+            resume_text = profile.resume_text
+
+        if not resume_text or not resume_text.strip():
+            return Response(
+                {'error': 'No resume content found. Please provide resume_text or add a resume to your profile.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Resolve job details
+        job = None
+        if data.get('job_id'):
+            try:
+                job = Job.objects.get(id=data['job_id'])
+            except Job.DoesNotExist:
+                return Response({'error': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        job_title = job.title if job else data.get('job_title', '')
+        company = job.company if job else data.get('company', '')
+        description = job.description if job else data.get('job_description', '')
+
+        try:
+            from groq_service import get_ai_service
+            ai_service = get_ai_service()
+            result = ai_service.tailor_resume(
+                resume_text=resume_text,
+                job_title=job_title,
+                company=company,
+                job_description=description,
+            )
+            response_serializer = TailorResumeResponseSerializer(result)
+            return Response(response_serializer.data)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Resume tailoring failed for user %s", request.user.id)
+            return Response(
+                {'error': 'AI service temporarily unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+
+class CompanyResearchView(APIView):
+    """Research a company for interview and application prep."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [AIRateThrottle]
+
+    def post(self, request):
+        serializer = CompanyResearchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        company = data['company']
+        job_title = data.get('job_title', '')
+        job_description = data.get('job_description', '')
+
+        if data.get('job_id'):
+            try:
+                job = Job.objects.get(id=data['job_id'])
+                company = job.company
+                job_title = job.title
+                job_description = job.description or ''
+            except Job.DoesNotExist:
+                pass
+
+        try:
+            from groq_service import get_ai_service
+            ai_service = get_ai_service()
+            result = ai_service.research_company(
+                company=company,
+                job_title=job_title,
+                job_description=job_description,
+            )
+            return Response(CompanyResearchResponseSerializer(result).data)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Company research failed for user %s", request.user.id)
+            return Response(
+                {'error': 'AI service temporarily unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+
+class AIChatView(APIView):
+    """Conversational AI assistant for job-hunting questions."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [AIRateThrottle]
+
+    def post(self, request):
+        serializer = AIChatSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        messages = serializer.validated_data['messages']
+
+        profile = request.user.profile
+        user_context = {
+            'name': f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username,
+            'experience_level': profile.experience_level or '',
+            'skills': list(profile.skills.values_list('skill__name', flat=True)),
+            'bio': profile.bio or '',
+        }
+
+        try:
+            from groq_service import get_ai_service
+            ai_service = get_ai_service()
+            reply = ai_service.chat(
+                messages=[{'role': m['role'], 'content': m['content']} for m in messages],
+                user_context=user_context,
+            )
+            return Response(AIChatResponseSerializer({'reply': reply}).data)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("AI chat failed for user %s", request.user.id)
+            return Response(
+                {'error': 'AI service temporarily unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )

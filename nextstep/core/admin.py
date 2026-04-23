@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Job, Skill, UserProfile, UserSkill, SavedJob
+from .models import Job, Skill, UserProfile, UserSkill, SavedJob, SwipeEvent
 
 
 @admin.register(Skill)
@@ -62,3 +62,12 @@ class SavedJobAdmin(admin.ModelAdmin):
     search_fields = ['user_profile__user__username', 'job__title', 'job__company']
     ordering = ['-saved_at']
     readonly_fields = ['saved_at', 'updated_at']
+
+
+@admin.register(SwipeEvent)
+class SwipeEventAdmin(admin.ModelAdmin):
+    list_display = ['user_profile', 'job', 'action', 'card_position', 'timestamp']
+    list_filter = ['action', 'timestamp']
+    search_fields = ['user_profile__user__username', 'job__title']
+    ordering = ['-timestamp']
+    readonly_fields = ['timestamp']

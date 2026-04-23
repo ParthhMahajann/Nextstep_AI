@@ -48,10 +48,10 @@ class ArbeitnowScraper(BaseScraper):
     INTERN_KEYWORDS = ['intern', 'junior', 'entry', 'graduate', 'trainee', 'fresher']
     STARTUP_KEYWORDS = ['startup', 'early stage', 'seed', 'series a', 'funded']
     
-    def __init__(self, limit: int = 50, india_only: bool = False):
+    def __init__(self, limit: int = 50, india_only: bool = True):
         super().__init__()
         self.limit = limit
-        self.india_only = india_only
+        self.india_only = india_only  # Default True — only remote/India jobs
     
     def _detect_job_type(self, job: dict) -> str:
         """Detect job type from listing."""
@@ -125,24 +125,30 @@ class ArbeitnowScraper(BaseScraper):
                 for job in jobs:
                     if len(opportunities) >= self.limit:
                         break
-                    
-                    # Filter for India-friendly if requested
-                    if self.india_only and not self._is_india_friendly(job):
+
+                    # Always filter for remote/India-friendly jobs
+                    if not self._is_india_friendly(job):
                         continue
                     
                     # Parse job data
                     title = job.get('title', '')
                     company = job.get('company_name', '')
-                    location = job.get('location', 'Remote')
                     description = self._clean_html(job.get('description', ''))
                     apply_link = job.get('url', '')
-                    
+
                     if not title or not apply_link:
                         continue
-                    
-                    # Use remote if location is empty
-                    if not location:
-                        location = 'Remote' if job.get('remote') else 'Not specified'
+
+                    # If the API marks the job as remote, always use "Remote" as the
+                    # location so that job_filter.is_india_or_remote() passes.
+                    is_remote = job.get('remote', False)
+                    raw_location = job.get('location', '')
+                    if is_remote:
+                        location = 'Remote'
+                    elif raw_location:
+                        location = raw_location
+                    else:
+                        location = 'Remote'
                     
                     # Ensure description has content
                     if not description or len(description) < 20:

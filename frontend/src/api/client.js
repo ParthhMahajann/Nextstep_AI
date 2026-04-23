@@ -4,7 +4,7 @@
 
 import axios from 'axios';
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 // Create axios instance
 const api = axios.create({
@@ -23,6 +23,33 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+// Token refresh mutex — prevents simultaneous refresh races with ROTATE_REFRESH_TOKENS=True
+let _refreshPromise = null;
+
+async function refreshAccessToken() {
+    // If a refresh is already in flight, wait for it rather than sending a second one.
+    if (_refreshPromise) return _refreshPromise;
+
+    _refreshPromise = (async () => {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (!refreshToken) throw new Error('No refresh token');
+
+        const response = await axios.post(`${API_BASE}/auth/refresh/`, { refresh: refreshToken });
+        const newAccess = response.data.access;
+        localStorage.setItem('access_token', newAccess);
+        if (response.data.refresh) {
+            localStorage.setItem('refresh_token', response.data.refresh);
+        }
+        return newAccess;
+    })();
+
+    try {
+        return await _refreshPromise;
+    } finally {
+        _refreshPromise = null;
+    }
+}
+
 // Handle token refresh
 api.interceptors.response.use(
     (response) => response,
@@ -32,23 +59,16 @@ api.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
 
-            const refreshToken = localStorage.getItem('refresh_token');
-            if (refreshToken) {
-                try {
-                    const response = await axios.post(`${API_BASE}/auth/refresh/`, {
-                        refresh: refreshToken,
-                    });
-
-                    localStorage.setItem('access_token', response.data.access);
-                    originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
-
-                    return api(originalRequest);
-                } catch {
-                    // Refresh failed, logout
-                    localStorage.removeItem('access_token');
-                    localStorage.removeItem('refresh_token');
-                    window.location.href = '/login';
-                }
+            try {
+                const newAccess = await refreshAccessToken();
+                originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+                return api(originalRequest);
+            } catch {
+                // Refresh failed — clear tokens and redirect to login
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                window.location.href = '/login';
+                return Promise.reject(error);
             }
         }
 
@@ -67,6 +87,7 @@ export const authAPI = {
     forgotPassword: (email) => api.post('/auth/password-reset/', { email }),
     resetPassword: (token, password, password_confirm) =>
         api.post('/auth/password-reset/confirm/', { token, password, password_confirm }),
+    logout: (data) => api.post('/auth/logout/', data),
 };
 
 // Profile API
@@ -77,6 +98,8 @@ export const profileAPI = {
         api.patch('/profile/', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         }),
+    getSkillSuggestions: () => api.get('/users/me/skill-suggestions/'),
+    getTasteProfile: () => api.get('/users/me/taste-profile/'),
 };
 
 // Skills API
@@ -91,23 +114,35 @@ export const skillsAPI = {
 export const jobsAPI = {
     list: (params) => api.get('/jobs/', { params }),
     get: (id) => api.get(`/jobs/${id}/`),
-    recommended: () => api.get('/jobs/recommended/'),
+    recommended: (params) => api.get('/jobs/recommended/', { params }),
     matchScore: (id) => api.get(`/jobs/${id}/match_score/`),
+    skillGap: (id) => api.get(`/jobs/${id}/skill_gap/`),
+    skip: (id, cardPosition = 0) => api.post(`/jobs/${id}/skip/`, { card_position: cardPosition }),
+    similar: (id) => api.get(`/jobs/${id}/similar/`),
 };
 
 // Saved Jobs API
 export const savedJobsAPI = {
-    list: () => api.get('/saved-jobs/'),
+    list: (params) => api.get('/saved-jobs/', { params }),
     save: (data) => api.post('/saved-jobs/', data),
     update: (id, data) => api.patch(`/saved-jobs/${id}/`, data),
     delete: (id) => api.delete(`/saved-jobs/${id}/`),
+    analytics: () => api.get('/saved-jobs/analytics/'),
+};
+
+// Resume Versions API
+export const resumeVersionsAPI = {
+    list: () => api.get('/resume-versions/'),
+    get: (id) => api.get(`/resume-versions/${id}/`),
+    create: (data) => api.post('/resume-versions/', data),
+    update: (id, data) => api.patch(`/resume-versions/${id}/`, data),
+    delete: (id) => api.delete(`/resume-versions/${id}/`),
 };
 
 // AI API
 export const aiAPI = {
     generateEmail: (data) => api.post('/ai/generate-email/', data),
     analyzeResume: (data) => {
-        // If data is FormData (file upload), let browser set Content-Type
         if (data instanceof FormData) {
             return api.post('/ai/analyze-resume/', data, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -117,6 +152,10 @@ export const aiAPI = {
     },
     generateCoverLetter: (data) => api.post('/ai/cover-letter/', data),
     getApplicationTips: (data) => api.post('/ai/application-tips/', data),
+    interviewPrep: (data) => api.post('/ai/interview-prep/', data),
+    tailorResume: (data) => api.post('/ai/tailor-resume/', data),
+    companyResearch: (data) => api.post('/ai/company-research/', data),
+    chat: (data) => api.post('/ai/chat/', data),
 };
 
 export default api;

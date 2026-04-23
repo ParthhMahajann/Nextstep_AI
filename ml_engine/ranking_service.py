@@ -20,6 +20,13 @@ class RankingConfig:
     preference_weight: float = 0.20
     recency_weight: float = 0.10
 
+    # Weights used when a user taste vector is available (must sum to 1.0)
+    taste_skill_weight: float = 0.30
+    taste_semantic_weight: float = 0.20
+    taste_preference_weight: float = 0.15
+    taste_recency_weight: float = 0.10
+    taste_weight: float = 0.25
+
 
 class RankingService:
     """
@@ -121,7 +128,9 @@ class RankingService:
         user_bio: str = "",
         preferred_job_types: Optional[List[str]] = None,
         preferred_locations: Optional[List[str]] = None,
-        top_n: Optional[int] = None
+        top_n: Optional[int] = None,
+        user_taste_vector=None,
+        skip_penalties: Optional[dict] = None,
     ) -> List[Dict]:
         """
         Rank jobs for a specific user.
@@ -145,42 +154,79 @@ class RankingService:
         
         ranked_jobs = []
         
+        use_taste = user_taste_vector is not None
+        skip_penalties = skip_penalties or {}
+
         for job in jobs:
             try:
+                cached_emb = job.get('cached_embedding')
+
                 # Skill matching (uses sentence transformers)
                 skill_info = self.skill_matcher.compute_skill_match(
                     user_skills=user_skills,
                     job_description=job.get('description', ''),
-                    job_required_skills=job.get('required_skills', [])
+                    job_required_skills=job.get('required_skills', []),
+                    job_embedding=cached_emb,
                 )
-                
+
                 skill_score = skill_info.get('skill_overlap', 0)
                 semantic_score = skill_info.get('semantic_similarity', 0)
-                
+
                 # Preference matching
                 preference_score = self._compute_preference_match(
                     job, preferred_job_types, preferred_locations
                 )
-                
+
+                # Apply skip penalties to preference score
+                if skip_penalties:
+                    role = job.get('role_type', 'other')
+                    exp = job.get('experience_level', 'any')
+                    penalty = max(
+                        skip_penalties.get(f'role_type:{role}', 0),
+                        skip_penalties.get(f'exp_level:{exp}', 0),
+                    )
+                    preference_score *= (1 - penalty)
+
                 # Recency score
                 recency_score = self._compute_recency_score(job)
-                
+
+                # Taste score
+                if use_taste and cached_emb is not None:
+                    from sklearn.metrics.pairwise import cosine_similarity
+                    import numpy as np
+                    taste_score = float(cosine_similarity(
+                        user_taste_vector.reshape(1, -1),
+                        cached_emb.reshape(1, -1),
+                    )[0][0])
+                else:
+                    taste_score = 0.0
+
                 # Combined weighted score
-                final_score = (
-                    self.config.skill_match_weight * skill_score +
-                    self.config.semantic_similarity_weight * semantic_score +
-                    self.config.preference_weight * preference_score +
-                    self.config.recency_weight * recency_score
-                )
+                if use_taste and cached_emb is not None:
+                    final_score = (
+                        self.config.taste_skill_weight * skill_score +
+                        self.config.taste_semantic_weight * semantic_score +
+                        self.config.taste_preference_weight * preference_score +
+                        self.config.taste_recency_weight * recency_score +
+                        self.config.taste_weight * taste_score
+                    )
+                else:
+                    final_score = (
+                        self.config.skill_match_weight * skill_score +
+                        self.config.semantic_similarity_weight * semantic_score +
+                        self.config.preference_weight * preference_score +
+                        self.config.recency_weight * recency_score
+                    )
                 
-                # Build result
+                # Build result (drop numpy array — not JSON-serialisable)
                 ranked_job = {
-                    **job,
+                    **{k: v for k, v in job.items() if k != 'cached_embedding'},
                     'match_score': round(final_score, 3),
                     'skill_score': round(skill_score, 3),
                     'semantic_score': round(semantic_score, 3),
                     'preference_score': round(preference_score, 3),
                     'recency_score': round(recency_score, 3),
+                    'taste_score': round(taste_score, 3),
                     'matched_skills': skill_info.get('matched_skills', []),
                     'missing_skills': skill_info.get('missing_skills', []),
                     'match_explanation': skill_info.get('explanation', '')

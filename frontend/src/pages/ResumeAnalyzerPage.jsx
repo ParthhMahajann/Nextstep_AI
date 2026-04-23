@@ -1,30 +1,302 @@
 /**
- * Resume Analyzer Page - AI-powered resume analysis
- * Supports PDF/DOCX file upload and text paste
+ * Resume Analyzer Page — Pinterest light theme
+ * Includes: analysis, AI tailoring, resume version management
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-    ArrowLeft,
-    Sparkles,
-    FileText,
-    CheckCircle,
-    AlertCircle,
-    Target,
-    TrendingUp,
-    Lightbulb,
-    Briefcase,
-    Upload,
-    X,
-    Type,
-    Wand2
+    Sparkles, FileText, CheckCircle, AlertCircle, Target,
+    TrendingUp, Lightbulb, Upload, X, Type,
+    Wand2, Zap, Plus, Trash2, Save, Layers, ChevronDown
 } from 'lucide-react';
-import { aiAPI, savedJobsAPI } from '../api/client';
+import { aiAPI, savedJobsAPI, resumeVersionsAPI } from '../api/client';
+import { useToast } from '../components/Toast';
+
+// ─── Resume Versions Section ─────────────────────────────────────────────────
+
+function ResumeVersionsPanel() {
+    const [versions, setVersions] = useState([]);
+    const [creating, setCreating] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newContent, setNewContent] = useState('');
+    const [newRole, setNewRole] = useState('');
+    const [saving, setSaving] = useState(false);
+    const toast = useToast();
+
+    const load = async () => {
+        try {
+            const res = await resumeVersionsAPI.list();
+            setVersions(Array.isArray(res.data) ? res.data : (res.data.results || []));
+        } catch { /* silent */ }
+    };
+
+    useEffect(() => { load(); }, []);
+
+    const create = async () => {
+        if (!newName.trim() || !newContent.trim()) return;
+        setSaving(true);
+        try {
+            await resumeVersionsAPI.create({ name: newName, content: newContent, target_role: newRole });
+            setCreating(false); setNewName(''); setNewContent(''); setNewRole('');
+            await load();
+            toast('Resume version saved!', 'success');
+        } catch {
+            toast('Failed to save version', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const remove = async (id) => {
+        try {
+            await resumeVersionsAPI.delete(id);
+            await load();
+            toast('Version deleted', 'info');
+        } catch {
+            toast('Failed to delete', 'error');
+        }
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            style={{ background: '#ffffff', border: '1px solid #e1e1e1', borderRadius: 20, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Layers size={17} color="#e60023" />
+                    <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Resume Versions</h2>
+                    {versions.length > 0 && (
+                        <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: 'rgba(230,0,35,0.08)', color: '#e60023' }}>
+                            {versions.length}
+                        </span>
+                    )}
+                </div>
+                <button
+                    onClick={() => setCreating(v => !v)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, border: '1px solid rgba(230,0,35,0.2)', background: 'rgba(230,0,35,0.06)', color: '#e60023', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                >
+                    <Plus size={13} /> New Version
+                </button>
+            </div>
+
+            {/* Create form */}
+            <AnimatePresence>
+                {creating && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        style={{ overflow: 'hidden', marginBottom: 16 }}
+                    >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '16px', background: 'rgba(230,0,35,0.03)', borderRadius: 14, border: '1px solid rgba(230,0,35,0.12)', marginBottom: 4 }}>
+                            <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Version name (e.g. 'Frontend v2')" className="input" style={{ fontSize: 13 }} />
+                            <input value={newRole} onChange={e => setNewRole(e.target.value)} placeholder="Target role (optional)" className="input" style={{ fontSize: 13 }} />
+                            <textarea value={newContent} onChange={e => setNewContent(e.target.value)} placeholder="Paste resume content here…" rows={6} className="input" style={{ resize: 'none', fontSize: 13, fontFamily: 'monospace', lineHeight: 1.6 }} />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button onClick={() => setCreating(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e1e1e1', background: '#f3f3f3', color: 'var(--text-muted)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                                    Cancel
+                                </button>
+                                <button onClick={create} disabled={saving || !newName.trim() || !newContent.trim()} className="btn btn-primary" style={{ flex: 2, padding: '10px', borderRadius: 10, opacity: (saving || !newName.trim() || !newContent.trim()) ? 0.5 : 1 }}>
+                                    <Save size={13} /> {saving ? 'Saving…' : 'Save Version'}
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Versions list */}
+            {versions.length === 0 && !creating ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
+                    No saved versions yet. Create one to track resume iterations.
+                </p>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {versions.map(v => (
+                        <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, background: '#f9f9f9', border: '1px solid #e1e1e1' }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(230,0,35,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <FileText size={16} color="#e60023" />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.name}</p>
+                                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                    {v.target_role && <>{v.target_role} · </>}
+                                    {new Date(v.updated_at).toLocaleDateString()}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => remove(v.id)}
+                                style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171', cursor: 'pointer', flexShrink: 0 }}
+                            >
+                                <Trash2 size={13} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </motion.div>
+    );
+}
+
+// ─── Resume Tailoring Section ─────────────────────────────────────────────────
+
+function TailorResumePanel({ savedJobs }) {
+    const [resumeText, setResumeText] = useState('');
+    const [jobId, setJobId] = useState('');
+    const [jobTitle, setJobTitle] = useState('');
+    const [tailoring, setTailoring] = useState(false);
+    const [result, setResult] = useState(null);
+    const [error, setError] = useState(null);
+    const toast = useToast();
+
+    const tailor = async () => {
+        if (!resumeText.trim()) { setError('Please paste your resume text'); return; }
+        if (!jobId && !jobTitle.trim()) { setError('Please select a job or enter a job title'); return; }
+        setTailoring(true); setError(null); setResult(null);
+        try {
+            const payload = { resume_text: resumeText };
+            if (jobId) payload.job_id = parseInt(jobId);
+            else { payload.job_title = jobTitle; }
+            const res = await aiAPI.tailorResume(payload);
+            setResult(res.data);
+        } catch (e) {
+            setError(e.response?.data?.error || 'Failed to tailor resume. Please try again.');
+        } finally {
+            setTailoring(false);
+        }
+    };
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        toast('Copied to clipboard!', 'success');
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            style={{ background: '#ffffff', border: '1px solid #e1e1e1', borderRadius: 20, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <Wand2 size={17} color="#e60023" />
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>AI Resume Tailoring</h2>
+                <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: 'rgba(230,0,35,0.08)', color: '#e60023' }}>AI</span>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
+                Paste your resume and select a job — AI will rewrite it to maximize ATS score and match.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <textarea
+                    value={resumeText}
+                    onChange={e => setResumeText(e.target.value)}
+                    placeholder="Paste your resume text here…"
+                    rows={8}
+                    className="input"
+                    style={{ resize: 'none', fontSize: 13, fontFamily: 'monospace', lineHeight: 1.6 }}
+                />
+
+                {savedJobs.length > 0 ? (
+                    <select value={jobId} onChange={e => setJobId(e.target.value)} className="input" style={{ fontSize: 13 }}>
+                        <option value="">Select a job to tailor for…</option>
+                        {savedJobs.map(item => (
+                            <option key={item.id} value={item.job.id}>
+                                {item.job.title} at {item.job.company}
+                            </option>
+                        ))}
+                    </select>
+                ) : (
+                    <input value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="Job title (e.g. 'Senior React Developer')" className="input" style={{ fontSize: 13 }} />
+                )}
+
+                {error && (
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <AlertCircle size={14} /> {error}
+                    </div>
+                )}
+
+                <button
+                    onClick={tailor}
+                    disabled={tailoring || !resumeText.trim()}
+                    className="btn btn-primary"
+                    style={{ width: '100%', opacity: (tailoring || !resumeText.trim()) ? 0.55 : 1, fontSize: 15, padding: '13px', gap: 8 }}
+                >
+                    {tailoring ? (
+                        <><div className="ai-pulse" style={{ gap: 4 }}><div className="ai-pulse-dot" style={{ width: 6, height: 6 }} /><div className="ai-pulse-dot" style={{ width: 6, height: 6 }} /><div className="ai-pulse-dot" style={{ width: 6, height: 6 }} /></div>Tailoring…</>
+                    ) : (
+                        <><Wand2 size={16} /> Tailor Resume</>
+                    )}
+                </button>
+            </div>
+
+            {/* Results */}
+            <AnimatePresence>
+                {result && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}
+                    >
+                        {/* ATS Score */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <div style={{ padding: '16px', borderRadius: 14, background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.15)', textAlign: 'center' }}>
+                                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>ATS Before</p>
+                                <p style={{ fontSize: 32, fontWeight: 900, color: '#f87171' }}>{result.ats_score_before}%</p>
+                            </div>
+                            <div style={{ padding: '16px', borderRadius: 14, background: 'rgba(0,168,107,0.06)', border: '1px solid rgba(0,168,107,0.15)', textAlign: 'center' }}>
+                                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>ATS After</p>
+                                <p style={{ fontSize: 32, fontWeight: 900, color: '#00a86b' }}>{result.ats_score_after}%</p>
+                            </div>
+                        </div>
+
+                        {/* Changes */}
+                        {result.changes?.length > 0 && (
+                            <div style={{ padding: 18, borderRadius: 14, background: 'rgba(230,0,35,0.03)', border: '1px solid rgba(230,0,35,0.12)' }}>
+                                <p style={{ fontSize: 13, fontWeight: 700, color: '#e60023', marginBottom: 10 }}>Changes Made</p>
+                                <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    {result.changes.map((c, i) => (
+                                        <li key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{c}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {/* Tailored resume */}
+                        <div style={{ position: 'relative' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Tailored Resume</p>
+                                <button
+                                    onClick={() => copyToClipboard(result.tailored_resume)}
+                                    style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid rgba(230,0,35,0.2)', background: 'rgba(230,0,35,0.06)', color: '#e60023', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                    Copy
+                                </button>
+                            </div>
+                            <pre style={{
+                                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                                fontSize: 12, lineHeight: 1.7, color: 'var(--text-secondary)',
+                                background: '#f9f9f9', border: '1px solid #e1e1e1',
+                                borderRadius: 12, padding: 16, margin: 0, maxHeight: 400, overflowY: 'auto',
+                            }}>
+                                {result.tailored_resume}
+                            </pre>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function ResumeAnalyzerPage() {
-    const [inputMode, setInputMode] = useState('upload'); // 'upload' or 'text'
+    const [inputMode, setInputMode] = useState('upload');
     const [resumeText, setResumeText] = useState('');
     const [resumeFile, setResumeFile] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -33,112 +305,64 @@ export function ResumeAnalyzerPage() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysis, setAnalysis] = useState(null);
     const [error, setError] = useState(null);
+    const [activeSection, setActiveSection] = useState('analyze');
     const fileInputRef = useRef(null);
 
-    // Fetch saved jobs for optional matching
     useEffect(() => {
         const fetchJobs = async () => {
             try {
                 const response = await savedJobsAPI.list();
-                setSavedJobs(response.data);
-            } catch (err) {
-                console.error('Failed to fetch saved jobs:', err);
-            }
+                const items = Array.isArray(response.data)
+                    ? response.data
+                    : (response.data.results || []);
+                setSavedJobs(items.filter(item => item.job));
+            } catch { /* silent */ }
         };
         fetchJobs();
     }, []);
 
     const isValidFile = (file) => {
-        const validTypes = [
-            'application/pdf',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        ];
-        const validExtensions = ['.pdf', '.docx'];
+        const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
         const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
-        return validTypes.includes(file.type) || validExtensions.includes(ext);
+        return validTypes.includes(file.type) || ['.pdf', '.docx'].includes(ext);
     };
 
     const handleFileSelect = (file) => {
         if (!file) return;
-
-        if (!isValidFile(file)) {
-            setError('Please upload a PDF or DOCX file');
-            return;
-        }
-
-        if (file.size > 10 * 1024 * 1024) {
-            setError('File size must be less than 10MB');
-            return;
-        }
-
+        if (!isValidFile(file)) { setError('Please upload a PDF or DOCX file'); return; }
+        if (file.size > 10 * 1024 * 1024) { setError('File size must be less than 10MB'); return; }
         setResumeFile(file);
         setError(null);
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        setIsDragging(true);
-    };
-
-    const handleDragLeave = (e) => {
-        e.preventDefault();
-        setIsDragging(false);
     };
 
     const handleDrop = (e) => {
         e.preventDefault();
         setIsDragging(false);
-        const file = e.dataTransfer.files[0];
-        handleFileSelect(file);
+        handleFileSelect(e.dataTransfer.files[0]);
     };
 
-    const handleFileInput = (e) => {
-        const file = e.target.files[0];
-        handleFileSelect(file);
-    };
-
-    const removeFile = () => {
-        setResumeFile(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-
-    const canAnalyze = () => {
-        if (inputMode === 'upload') return !!resumeFile;
-        return !!resumeText.trim();
-    };
+    const canAnalyze = () => inputMode === 'upload' ? !!resumeFile : !!resumeText.trim();
 
     const analyzeResume = async () => {
         if (!canAnalyze()) {
-            setError(inputMode === 'upload'
-                ? 'Please upload your resume file'
-                : 'Please paste your resume text');
+            setError(inputMode === 'upload' ? 'Please upload your resume file' : 'Please paste your resume text');
             return;
         }
-
         setIsAnalyzing(true);
         setError(null);
         setAnalysis(null);
-
         try {
             let response;
-
             if (inputMode === 'upload' && resumeFile) {
                 const formData = new FormData();
                 formData.append('resume_file', resumeFile);
-                if (selectedJobId) {
-                    formData.append('job_id', selectedJobId);
-                }
+                if (selectedJobId) formData.append('job_id', selectedJobId);
                 response = await aiAPI.analyzeResume(formData);
             } else {
                 const payload = { resume_text: resumeText };
-                if (selectedJobId) {
-                    payload.job_id = parseInt(selectedJobId);
-                }
+                if (selectedJobId) payload.job_id = parseInt(selectedJobId);
                 response = await aiAPI.analyzeResume(payload);
             }
-
             setAnalysis(response.data);
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to analyze resume. Please try again.');
@@ -147,353 +371,310 @@ export function ResumeAnalyzerPage() {
         }
     };
 
-    const getScoreColor = (score) => {
-        if (score >= 0.7) return 'text-green-400';
-        if (score >= 0.4) return 'text-yellow-400';
-        return 'text-red-400';
-    };
+    const scoreColor = (s) => s >= 0.7 ? '#00a86b' : s >= 0.4 ? '#d97706' : '#f87171';
+    const scoreBg = (s) => s >= 0.7 ? 'rgba(0,168,107,0.06)' : s >= 0.4 ? 'rgba(217,119,6,0.06)' : 'rgba(248,113,113,0.06)';
+    const scoreBorder = (s) => s >= 0.7 ? 'rgba(0,168,107,0.18)' : s >= 0.4 ? 'rgba(217,119,6,0.18)' : 'rgba(248,113,113,0.18)';
+    const fmtSize = (b) => b < 1024 * 1024 ? (b / 1024).toFixed(1) + ' KB' : (b / 1024 / 1024).toFixed(1) + ' MB';
 
-    const getScoreBg = (score) => {
-        if (score >= 0.7) return 'from-green-500/20 to-emerald-500/20';
-        if (score >= 0.4) return 'from-yellow-500/20 to-amber-500/20';
-        return 'from-red-500/20 to-rose-500/20';
-    };
-
-    const formatFileSize = (bytes) => {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    };
+    const SECTIONS = [
+        { key: 'analyze', label: 'Analyze', icon: Sparkles },
+        { key: 'tailor', label: 'Tailor', icon: Wand2 },
+        { key: 'versions', label: 'Versions', icon: Layers },
+    ];
 
     return (
-        <div className="min-h-screen">
+        <div className="page" style={{ position: 'relative', zIndex: 1 }}>
             {/* Header */}
-            <header className="glass border-b border-white/10 px-6 py-4">
-                <div className="max-w-3xl mx-auto flex items-center gap-4">
-                    <Link to="/discover" className="p-2 hover:bg-white/5 rounded-lg transition">
-                        <ArrowLeft size={24} />
-                    </Link>
-                    <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                            <FileText size={20} className="text-white" />
-                        </div>
-                        <h1 className="text-xl font-bold">Resume Analyzer</h1>
+            <header style={{
+                position: 'sticky', top: 0, zIndex: 50,
+                padding: '16px 20px',
+                background: 'rgba(255,255,255,0.95)',
+                backdropFilter: 'blur(12px)',
+                borderBottom: '1px solid var(--border)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="logo-mark" style={{ width: 32, height: 32, borderRadius: 10 }}>
+                        <Zap size={15} color="#fff" strokeWidth={2.5} />
+                    </div>
+                    <h1 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                        Resume
+                    </h1>
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, background: 'rgba(230,0,35,0.08)', border: '1px solid rgba(230,0,35,0.15)' }}>
+                        <Sparkles size={12} color="#e60023" />
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#e60023' }}>AI-Powered</span>
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-3xl mx-auto p-6 space-y-6">
-                {/* Input Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="glass rounded-2xl p-6"
-                >
-                    <div className="flex items-center gap-2 mb-4">
-                        <Sparkles className="text-indigo-400" size={20} />
-                        <h2 className="text-lg font-semibold">Analyze Your Resume</h2>
-                    </div>
+            <main style={{ maxWidth: 680, width: '100%', margin: '0 auto', padding: '20px 16px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Section tabs */}
+                <div style={{ display: 'flex', gap: 6, padding: 5, borderRadius: 16, background: '#f3f3f3', border: '1px solid #e1e1e1' }}>
+                    {SECTIONS.map(({ key, label, icon: Icon }) => {
+                        const active = activeSection === key;
+                        return (
+                            <button key={key} onClick={() => setActiveSection(key)} style={{
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                padding: '9px 12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                                fontWeight: 700, fontSize: 13, transition: 'all 0.2s',
+                                background: active ? '#ffffff' : 'transparent',
+                                color: active ? '#e60023' : 'var(--text-muted)',
+                                boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                                outline: active ? '1px solid rgba(230,0,35,0.15)' : '1px solid transparent',
+                            }}>
+                                <Icon size={14} /> {label}
+                            </button>
+                        );
+                    })}
+                </div>
 
-                    <p className="text-slate-400 text-sm mb-4">
-                        Upload your resume or paste text to get AI-powered insights on strengths,
-                        improvements, and keyword optimization.
-                    </p>
-
-                    {/* Input Mode Toggle */}
-                    <div className="flex gap-2 mb-4">
-                        <button
-                            onClick={() => setInputMode('upload')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${inputMode === 'upload'
-                                ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/50'
-                                : 'bg-slate-800/50 text-slate-400 border border-white/10 hover:bg-slate-700/50'
-                                }`}
+                {/* Analyze section */}
+                {activeSection === 'analyze' && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            style={{ background: '#ffffff', border: '1px solid #e1e1e1', borderRadius: 20, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
                         >
-                            <Upload size={16} />
-                            Upload File
-                        </button>
-                        <button
-                            onClick={() => setInputMode('text')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${inputMode === 'text'
-                                ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/50'
-                                : 'bg-slate-800/50 text-slate-400 border border-white/10 hover:bg-slate-700/50'
-                                }`}
-                        >
-                            <Type size={16} />
-                            Paste Text
-                        </button>
-                    </div>
+                            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Sparkles size={17} color="#e60023" /> Analyze Your Resume
+                            </h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
+                                Get AI-powered insights on strengths, improvements, and keyword optimization.
+                            </p>
 
-                    {/* File Upload Zone */}
-                    {inputMode === 'upload' && (
-                        <>
-                            {!resumeFile ? (
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className={`mb-4 border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${isDragging
-                                        ? 'border-indigo-500 bg-indigo-500/10'
-                                        : 'border-white/20 hover:border-indigo-500/50 hover:bg-indigo-500/5'
-                                        }`}
-                                >
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                        onChange={handleFileInput}
-                                        className="hidden"
-                                    />
-                                    <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-                                        <Upload size={28} className="text-indigo-400" />
-                                    </div>
-                                    <p className="font-medium mb-1">
-                                        {isDragging ? 'Drop your resume here' : 'Drag & drop your resume'}
-                                    </p>
-                                    <p className="text-slate-400 text-sm mb-3">or click to browse files</p>
-                                    <p className="text-slate-500 text-xs">Supports PDF and DOCX • Max 10MB</p>
-                                </div>
-                            ) : (
-                                <div className="mb-4 border border-white/10 rounded-xl p-4 flex items-center justify-between bg-slate-800/50">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                                            <FileText size={22} className="text-indigo-400" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-sm">{resumeFile.name}</p>
-                                            <p className="text-slate-400 text-xs">{formatFileSize(resumeFile.size)}</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={removeFile}
-                                        className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 transition"
-                                    >
-                                        <X size={18} />
+                            {/* Mode toggle */}
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+                                {[{ key: 'upload', icon: Upload, label: 'Upload File' }, { key: 'text', icon: Type, label: 'Paste Text' }].map(({ key, icon: Icon, label }) => (
+                                    <button key={key} onClick={() => setInputMode(key)} style={{
+                                        display: 'flex', alignItems: 'center', gap: 6,
+                                        padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                                        cursor: 'pointer', border: 'none', transition: 'all 0.15s',
+                                        background: inputMode === key ? 'rgba(230,0,35,0.08)' : '#f3f3f3',
+                                        color: inputMode === key ? '#e60023' : 'var(--text-muted)',
+                                        outline: inputMode === key ? '1px solid rgba(230,0,35,0.25)' : '1px solid #e1e1e1',
+                                    }}>
+                                        <Icon size={14} /> {label}
                                     </button>
+                                ))}
+                            </div>
+
+                            {/* File upload */}
+                            {inputMode === 'upload' && (
+                                <AnimatePresence mode="wait">
+                                    {!resumeFile ? (
+                                        <motion.div
+                                            key="dropzone"
+                                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                            onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                                            onDragLeave={e => { e.preventDefault(); setIsDragging(false); }}
+                                            onDrop={handleDrop}
+                                            onClick={() => fileInputRef.current?.click()}
+                                            style={{
+                                                marginBottom: 16, borderRadius: 14, padding: '36px 24px', textAlign: 'center',
+                                                cursor: 'pointer', transition: 'all 0.2s',
+                                                border: `1.5px dashed ${isDragging ? '#e60023' : '#d0d0d0'}`,
+                                                background: isDragging ? 'rgba(230,0,35,0.04)' : '#fafafa',
+                                            }}
+                                        >
+                                            <input ref={fileInputRef} type="file" accept=".pdf,.docx" onChange={e => handleFileSelect(e.target.files[0])} style={{ display: 'none' }} />
+                                            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(230,0,35,0.08)', border: '1px solid rgba(230,0,35,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                                                <Upload size={24} color="#e60023" />
+                                            </div>
+                                            <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+                                                {isDragging ? 'Drop your resume here' : 'Drag & drop your resume'}
+                                            </p>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 4 }}>or click to browse files</p>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>PDF or DOCX · Max 10MB</p>
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div
+                                            key="file"
+                                            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                                            style={{ marginBottom: 16, border: '1px solid rgba(0,168,107,0.2)', borderRadius: 12, padding: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,168,107,0.04)' }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(230,0,35,0.08)', border: '1px solid rgba(230,0,35,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <FileText size={20} color="#e60023" />
+                                                </div>
+                                                <div>
+                                                    <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>{resumeFile.name}</p>
+                                                    <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{fmtSize(resumeFile.size)}</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => { setResumeFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                                                style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171', cursor: 'pointer' }}>
+                                                <X size={15} />
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            )}
+
+                            {/* Text input */}
+                            {inputMode === 'text' && (
+                                <textarea
+                                    value={resumeText}
+                                    onChange={e => setResumeText(e.target.value)}
+                                    placeholder="Paste your resume text here..."
+                                    rows={9}
+                                    className="input"
+                                    style={{ resize: 'none', minHeight: 200, marginBottom: 16, fontFamily: 'monospace', fontSize: 13, lineHeight: 1.6 }}
+                                />
+                            )}
+
+                            {/* Job selector */}
+                            {savedJobs.length > 0 && (
+                                <div style={{ marginBottom: 16 }}>
+                                    <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        Compare against saved job (optional)
+                                    </label>
+                                    <select value={selectedJobId} onChange={e => setSelectedJobId(e.target.value)} className="input">
+                                        <option value="">No job — general analysis</option>
+                                        {savedJobs.map(item => (
+                                            <option key={item.id} value={item.job.id}>
+                                                {item.job.title} at {item.job.company}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                             )}
-                        </>
-                    )}
 
-                    {/* Text Input */}
-                    {inputMode === 'text' && (
-                        <textarea
-                            value={resumeText}
-                            onChange={(e) => setResumeText(e.target.value)}
-                            placeholder="Paste your resume text here..."
-                            rows={10}
-                            className="input resize-none mb-4"
-                            style={{ minHeight: '200px' }}
-                        />
-                    )}
+                            {error && (
+                                <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 10, background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <AlertCircle size={14} /> {error}
+                                </div>
+                            )}
 
-                    {/* Optional Job Selection */}
-                    {savedJobs.length > 0 && (
-                        <div className="mb-4">
-                            <label className="block text-sm text-slate-400 mb-2">
-                                <Briefcase size={14} className="inline mr-1" />
-                                Compare against a saved job (optional)
-                            </label>
-                            <select
-                                value={selectedJobId}
-                                onChange={(e) => setSelectedJobId(e.target.value)}
-                                className="input"
+                            <button
+                                onClick={analyzeResume}
+                                disabled={isAnalyzing || !canAnalyze()}
+                                className="btn btn-primary"
+                                style={{ width: '100%', opacity: (isAnalyzing || !canAnalyze()) ? 0.55 : 1, fontSize: 15, padding: '13px', gap: 8 }}
                             >
-                                <option value="">No job selected - General analysis</option>
-                                {savedJobs.map((item) => (
-                                    <option key={item.id} value={item.job?.id || item.id}>
-                                        {item.job?.title || item.title} at {item.job?.company || item.company}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
+                                {isAnalyzing ? (
+                                    <><div className="ai-pulse" style={{ gap: 4 }}><div className="ai-pulse-dot" style={{ width: 6, height: 6 }} /><div className="ai-pulse-dot" style={{ width: 6, height: 6 }} /><div className="ai-pulse-dot" style={{ width: 6, height: 6 }} /></div>Analyzing…</>
+                                ) : (
+                                    <><Sparkles size={16} /> Analyze Resume</>
+                                )}
+                            </button>
+                        </motion.div>
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className="mb-4 p-3 rounded-lg bg-red-500/20 text-red-400 text-sm flex items-center gap-2">
-                            <AlertCircle size={16} />
-                            {error}
-                        </div>
-                    )}
+                        {/* Results */}
+                        <AnimatePresence>
+                            {analysis && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+                                >
+                                    {selectedJobId && analysis.match_score !== undefined && (
+                                        <div style={{ background: scoreBg(analysis.match_score), border: `1px solid ${scoreBorder(analysis.match_score)}`, borderRadius: 20, padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                                <Target size={24} color={scoreColor(analysis.match_score)} />
+                                                <div>
+                                                    <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 15 }}>Match Score</h3>
+                                                    <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Resume vs job requirements</p>
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: 44, fontWeight: 900, color: scoreColor(analysis.match_score), letterSpacing: '-0.02em' }}>
+                                                {Math.round(analysis.match_score * 100)}%
+                                            </div>
+                                        </div>
+                                    )}
 
-                    {/* Analyze Button */}
-                    <button
-                        onClick={analyzeResume}
-                        disabled={isAnalyzing || !canAnalyze()}
-                        className="btn btn-primary w-full gap-2"
-                        style={{ opacity: (isAnalyzing || !canAnalyze()) ? 0.5 : 1 }}
-                    >
-                        {isAnalyzing ? (
-                            <>
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                Analyzing...
-                            </>
-                        ) : (
-                            <>
-                                <Sparkles size={18} />
-                                Analyze Resume
-                            </>
-                        )}
-                    </button>
-                </motion.div>
-
-                {/* Results Section */}
-                {analysis && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-4"
-                    >
-                        {/* Match Score (if job selected) */}
-                        {selectedJobId && analysis.match_score !== undefined && (
-                            <div className={`glass rounded-2xl p-6 bg-gradient-to-br ${getScoreBg(analysis.match_score)}`}>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <Target size={24} className={getScoreColor(analysis.match_score)} />
-                                        <div>
-                                            <h3 className="font-semibold">Match Score</h3>
-                                            <p className="text-sm text-slate-400">How well your resume matches the job</p>
+                                    <div style={{ background: '#ffffff', border: '1px solid #e1e1e1', borderRadius: 20, padding: 22, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                                            <CheckCircle size={18} color="#00a86b" />
+                                            <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 15 }}>Strengths</h3>
+                                        </div>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                            {analysis.strengths?.map((s, i) => (
+                                                <span key={i} style={{ padding: '6px 14px', borderRadius: 999, fontSize: 13, background: 'rgba(0,168,107,0.08)', color: '#00a86b', border: '1px solid rgba(0,168,107,0.2)' }}>{s}</span>
+                                            ))}
                                         </div>
                                     </div>
-                                    <div className={`text-4xl font-bold ${getScoreColor(analysis.match_score)}`}>
-                                        {Math.round(analysis.match_score * 100)}%
+
+                                    <div style={{ background: '#ffffff', border: '1px solid #e1e1e1', borderRadius: 20, padding: 22, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                                            <TrendingUp size={18} color="#d97706" />
+                                            <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 15 }}>Areas for Improvement</h3>
+                                        </div>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                            {analysis.improvements?.map((s, i) => (
+                                                <span key={i} style={{ padding: '6px 14px', borderRadius: 999, fontSize: 13, background: 'rgba(217,119,6,0.08)', color: '#d97706', border: '1px solid rgba(217,119,6,0.2)' }}>{s}</span>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        )}
 
-                        {/* Strengths */}
-                        <div className="glass rounded-2xl p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <CheckCircle className="text-green-400" size={20} />
-                                <h3 className="font-semibold">Strengths</h3>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {analysis.strengths.map((strength, index) => (
-                                    <span
-                                        key={index}
-                                        className="px-3 py-1.5 rounded-full bg-green-500/20 text-green-400 text-sm"
-                                    >
-                                        {strength}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Areas for Improvement */}
-                        <div className="glass rounded-2xl p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <TrendingUp className="text-yellow-400" size={20} />
-                                <h3 className="font-semibold">Areas for Improvement</h3>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {analysis.improvements.map((improvement, index) => (
-                                    <span
-                                        key={index}
-                                        className="px-3 py-1.5 rounded-full bg-yellow-500/20 text-yellow-400 text-sm"
-                                    >
-                                        {improvement}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Keywords */}
-                        <div className="grid md:grid-cols-2 gap-4">
-                            {/* Keywords Found */}
-                            <div className="glass rounded-2xl p-6">
-                                <h3 className="font-semibold mb-3 text-green-400">✓ Keywords Found</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {analysis.keywords_found.map((keyword, index) => (
-                                        <span
-                                            key={index}
-                                            className="px-2 py-1 rounded bg-slate-700 text-sm"
-                                        >
-                                            {keyword}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Keywords Missing */}
-                            <div className="glass rounded-2xl p-6">
-                                <h3 className="font-semibold mb-3 text-red-400">✗ Consider Adding</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {analysis.keywords_missing.map((keyword, index) => (
-                                        <span
-                                            key={index}
-                                            className="px-2 py-1 rounded bg-slate-700 text-sm"
-                                        >
-                                            {keyword}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* General Suggestions */}
-                        {analysis.suggestions && (
-                            <div className="glass rounded-2xl p-6">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Lightbulb className="text-indigo-400" size={20} />
-                                    <h3 className="font-semibold">AI Suggestions</h3>
-                                </div>
-                                <p className="text-slate-300 leading-relaxed">
-                                    {analysis.suggestions}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Job-Tailored Suggestions */}
-                        {selectedJobId && analysis.job_tailored_suggestions && analysis.job_tailored_suggestions.length > 0 && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 16 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.15 }}
-                                className="glass rounded-2xl p-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(109,40,217,0.04) 100%)',
-                                    borderColor: 'rgba(139,92,246,0.25)'
-                                }}
-                            >
-                                <div className="flex items-center gap-3 mb-5">
-                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(139,92,246,0.18)' }}>
-                                        <Wand2 size={18} className="text-violet-400" />
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+                                        <div style={{ background: '#ffffff', border: '1px solid #e1e1e1', borderRadius: 20, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                                            <h3 style={{ fontWeight: 700, color: '#00a86b', fontSize: 14, marginBottom: 12 }}>✓ Keywords Found</h3>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                                {analysis.keywords_found?.map((k, i) => (
+                                                    <span key={i} style={{ padding: '3px 10px', borderRadius: 6, fontSize: 12, background: 'rgba(0,168,107,0.06)', color: 'var(--text-secondary)', border: '1px solid rgba(0,168,107,0.15)' }}>{k}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div style={{ background: '#ffffff', border: '1px solid #e1e1e1', borderRadius: 20, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                                            <h3 style={{ fontWeight: 700, color: '#f87171', fontSize: 14, marginBottom: 12 }}>✗ Consider Adding</h3>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                                {analysis.keywords_missing?.map((k, i) => (
+                                                    <span key={i} style={{ padding: '3px 10px', borderRadius: 6, fontSize: 12, background: 'rgba(248,113,113,0.06)', color: 'var(--text-secondary)', border: '1px solid rgba(248,113,113,0.15)' }}>{k}</span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="font-semibold text-violet-300">Job-Tailored Suggestions</h3>
-                                        <p className="text-xs text-slate-400 mt-0.5">Specific edits to match this role</p>
-                                    </div>
-                                    <span className="ml-auto px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(139,92,246,0.18)', color: '#c4b5fd' }}>
-                                        {analysis.job_tailored_suggestions.length} suggestions
-                                    </span>
-                                </div>
 
-                                <div className="space-y-3">
-                                    {analysis.job_tailored_suggestions.map((suggestion, index) => (
+                                    {analysis.suggestions && (
+                                        <div style={{ background: '#ffffff', border: '1px solid #e1e1e1', borderRadius: 20, padding: 22, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                                                <Lightbulb size={18} color="#e60023" />
+                                                <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 15 }}>AI Suggestions</h3>
+                                            </div>
+                                            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: 14 }}>{analysis.suggestions}</p>
+                                        </div>
+                                    )}
+
+                                    {selectedJobId && analysis.job_tailored_suggestions?.length > 0 && (
                                         <motion.div
-                                            key={index}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.05 * index }}
-                                            className="flex gap-3 p-4 rounded-xl transition-all hover:scale-[1.01]"
-                                            style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)' }}
+                                            initial={{ opacity: 0, y: 16 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.1 }}
+                                            style={{ background: 'rgba(230,0,35,0.03)', border: '1px solid rgba(230,0,35,0.12)', borderRadius: 20, padding: 22 }}
                                         >
-                                            <span
-                                                className="flex-shrink-0 w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center"
-                                                style={{ background: 'rgba(139,92,246,0.22)', color: '#c4b5fd' }}
-                                            >
-                                                {index + 1}
-                                            </span>
-                                            <p className="text-slate-300 text-sm leading-relaxed">{suggestion}</p>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+                                                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(230,0,35,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Wand2 size={17} color="#e60023" />
+                                                </div>
+                                                <div>
+                                                    <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 15 }}>Job-Tailored Suggestions</h3>
+                                                    <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Specific edits to match this role</p>
+                                                </div>
+                                                <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: 'rgba(230,0,35,0.08)', color: '#e60023' }}>
+                                                    {analysis.job_tailored_suggestions.length}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                {analysis.job_tailored_suggestions.map((s, i) => (
+                                                    <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }}
+                                                        style={{ display: 'flex', gap: 12, padding: '12px 14px', borderRadius: 12, background: 'rgba(230,0,35,0.04)', border: '1px solid rgba(230,0,35,0.1)' }}>
+                                                        <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 7, background: 'rgba(230,0,35,0.08)', color: '#e60023', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            {i + 1}
+                                                        </span>
+                                                        <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6 }}>{s}</p>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
                                         </motion.div>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        )}
-                    </motion.div>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </>
                 )}
+
+                {activeSection === 'tailor' && <TailorResumePanel savedJobs={savedJobs} />}
+                {activeSection === 'versions' && <ResumeVersionsPanel />}
             </main>
         </div>
     );

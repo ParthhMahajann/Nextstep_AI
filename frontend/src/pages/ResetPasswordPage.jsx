@@ -1,11 +1,11 @@
 /**
- * Reset Password page — reads ?token= from URL, lets user set a new password.
+ * Reset Password page — 2026 dark glassmorphism design
  */
 
 import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, Eye, EyeOff, CheckCircle, ArrowRight } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle, ArrowRight, Zap } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 export function ResetPasswordPage() {
@@ -19,13 +19,6 @@ export function ResetPasswordPage() {
     const [showPw, setShowPw] = useState(false);
     const [localError, setLocalError] = useState('');
     const [success, setSuccess] = useState(false);
-
-    const inputStyle = {
-        width: '100%', padding: '13px 16px 13px 44px',
-        background: 'rgba(15,23,42,0.6)',
-        border: '2px solid rgba(255,255,255,0.1)',
-        borderRadius: '12px', color: 'white', fontSize: '15px', outline: 'none',
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -46,9 +39,11 @@ export function ResetPasswordPage() {
 
     if (!token) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-6">
-                <div className="glass" style={{ borderRadius: '20px', padding: '40px', textAlign: 'center', maxWidth: '400px' }}>
-                    <p style={{ color: '#ef4444', marginBottom: '16px' }}>Invalid reset link. Please request a new one.</p>
+            <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', zIndex: 1 }}>
+                <div className="glass-card" style={{ padding: 40, textAlign: 'center', maxWidth: 400, width: '100%' }}>
+                    <p style={{ color: '#f87171', marginBottom: 20, fontSize: 15 }}>
+                        Invalid reset link. Please request a new one.
+                    </p>
                     <Link to="/forgot-password" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex' }}>
                         Request Reset Link
                     </Link>
@@ -58,62 +53,87 @@ export function ResetPasswordPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-6">
+        <div style={{
+            minHeight: '100dvh',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24, position: 'relative', zIndex: 1,
+        }}>
             <motion.div
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                style={{ width: '100%', maxWidth: '420px' }}
+                initial={{ opacity: 0, y: 24, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                style={{ width: '100%', maxWidth: 420 }}
             >
-                <div className="glass" style={{ borderRadius: '20px', padding: '40px 36px' }}>
+                {/* Logo */}
+                <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                        <div className="logo-mark" style={{ width: 36, height: 36, borderRadius: 11 }}>
+                            <Zap size={18} color="#fff" strokeWidth={2.5} />
+                        </div>
+                        <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                            NextStep<span className="text-gradient">AI</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div className="glass-card" style={{ padding: '36px 32px', textAlign: 'center' }}>
                     {success ? (
-                        <div style={{ textAlign: 'center' }}>
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
                             <div style={{
-                                width: 68, height: 68, borderRadius: '50%', margin: '0 auto 20px',
-                                background: 'rgba(34,197,94,0.15)', border: '2px solid rgba(34,197,94,0.4)',
+                                width: 72, height: 72, borderRadius: '50%', margin: '0 auto 20px',
+                                background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                                <CheckCircle size={34} color="#22c55e" />
+                                <CheckCircle size={34} color="#4ade80" />
                             </div>
-                            <h2 style={{ color: '#fff', fontSize: '22px', fontWeight: 700, marginBottom: '10px' }}>Password reset!</h2>
-                            <p style={{ color: '#94a3b8', fontSize: '14px' }}>Redirecting you to login…</p>
-                        </div>
+                            <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>
+                                Password reset!
+                            </h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Redirecting you to login…</p>
+                        </motion.div>
                     ) : (
                         <>
-                            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+                            <div style={{ marginBottom: 28 }}>
                                 <div style={{
-                                    width: 60, height: 60, borderRadius: '50%', margin: '0 auto 16px',
-                                    background: 'rgba(99,102,241,0.15)', border: '2px solid rgba(99,102,241,0.3)',
+                                    width: 64, height: 64, borderRadius: '50%', margin: '0 auto 20px',
+                                    background: 'rgba(230,0,35,0.08)', border: '1px solid rgba(230,0,35,0.15)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 }}>
-                                    <Lock size={28} color="#a5b4fc" />
+                                    <Lock size={28} color="#e60023" />
                                 </div>
-                                <h1 style={{ color: '#fff', fontSize: '22px', fontWeight: 700, marginBottom: '8px' }}>
+                                <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
                                     Set new password
                                 </h1>
-                                <p style={{ color: '#94a3b8', fontSize: '14px' }}>Choose a strong password for your account.</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+                                    Choose a strong password for your account.
+                                </p>
                             </div>
 
-                            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left' }}>
                                 <div style={{ position: 'relative' }}>
-                                    <Lock size={18} color="#64748b" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+                                    <Lock size={16} color="var(--text-muted)"
+                                        style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                                     <input
                                         type={showPw ? 'text' : 'password'}
-                                        style={{ ...inputStyle, paddingRight: '48px' }}
+                                        className="input"
+                                        style={{ paddingLeft: 44, paddingRight: 48 }}
                                         placeholder="New password"
                                         value={password}
                                         onChange={e => setPassword(e.target.value)}
                                         required
                                     />
                                     <button type="button" onClick={() => setShowPw(v => !v)}
-                                        style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                                        {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, display: 'flex' }}>
+                                        {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                                     </button>
                                 </div>
                                 <div style={{ position: 'relative' }}>
-                                    <Lock size={18} color="#64748b" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+                                    <Lock size={16} color="var(--text-muted)"
+                                        style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                                     <input
                                         type={showPw ? 'text' : 'password'}
-                                        style={inputStyle}
+                                        className="input"
+                                        style={{ paddingLeft: 44 }}
                                         placeholder="Confirm new password"
                                         value={passwordConfirm}
                                         onChange={e => setPasswordConfirm(e.target.value)}
@@ -122,22 +142,33 @@ export function ResetPasswordPage() {
                                 </div>
 
                                 {(localError || error) && (
-                                    <div style={{
-                                        padding: '10px 14px', borderRadius: '10px',
-                                        background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
-                                        color: '#f87171', fontSize: '14px',
-                                    }}>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--error-bg)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: 13 }}
+                                    >
                                         {localError || (typeof error === 'string' ? error : 'Reset failed.')}
-                                    </div>
+                                    </motion.div>
                                 )}
 
-                                <button type="submit" disabled={isLoading} className="btn btn-primary" style={{ gap: '8px' }}>
-                                    {isLoading ? 'Resetting…' : <>Reset Password <ArrowRight size={18} /></>}
+                                <button type="submit" disabled={isLoading} className="btn btn-primary"
+                                    style={{ width: '100%', padding: '13px', fontSize: 15, gap: 8, marginTop: 4 }}>
+                                    {isLoading ? (
+                                        <>
+                                            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%' }} className="animate-spin" />
+                                            Resetting…
+                                        </>
+                                    ) : (
+                                        <>Reset Password <ArrowRight size={16} /></>
+                                    )}
                                 </button>
                             </form>
 
-                            <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                                <Link to="/login" style={{ color: '#64748b', fontSize: '14px', textDecoration: 'none' }}>
+                            <div style={{ marginTop: 20 }}>
+                                <Link to="/login" style={{ color: 'var(--text-muted)', fontSize: 14, textDecoration: 'none' }}
+                                    onMouseOver={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                    onMouseOut={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                                >
                                     Back to Login
                                 </Link>
                             </div>
