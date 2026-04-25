@@ -397,3 +397,76 @@ def test_wellfound_returns_empty_when_no_next_data():
         results = scraper.fetch_opportunities()
 
     assert results == []
+
+
+UNSTOP_JOBS_HTML = """<html><head></head><body>
+<script id="__NEXT_DATA__" type="application/json">
+{
+  "props": {
+    "pageProps": {
+      "opportunities": [
+        {
+          "id": 5001,
+          "title": "Software Engineer",
+          "organisation": {"name": "IndianStartup"},
+          "location": "Bengaluru",
+          "is_remote": false,
+          "description": "Join our engineering team in Bengaluru."
+        },
+        {
+          "id": 5002,
+          "title": "Data Analyst Intern",
+          "organisation": {"name": "DataFirm"},
+          "location": "Delhi",
+          "is_remote": true,
+          "description": "Remote internship for fresh graduates."
+        }
+      ]
+    }
+  }
+}
+</script>
+</body></html>"""
+
+
+@pytest.mark.django_db
+def test_unstop_parses_jobs():
+    from unstop_scraper import UnstopScraper
+
+    scraper = UnstopScraper(limit=10)
+
+    mock_resp = MagicMock()
+    mock_resp.text = UNSTOP_JOBS_HTML
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.status_code = 200
+
+    with patch('requests.request', return_value=mock_resp):
+        results = scraper.fetch_opportunities()
+
+    assert len(results) == 2
+
+    eng = next(r for r in results if "Software Engineer" in r.title)
+    assert eng.company == "IndianStartup"
+    assert eng.job_type == "job"
+    assert eng.source == "unstop"
+
+    intern_job = next(r for r in results if "Intern" in r.title)
+    assert intern_job.job_type == "internship"
+    assert "remote" in intern_job.location.lower()
+
+
+@pytest.mark.django_db
+def test_unstop_returns_empty_on_no_data():
+    from unstop_scraper import UnstopScraper
+
+    scraper = UnstopScraper(limit=10)
+
+    mock_resp = MagicMock()
+    mock_resp.text = "<html><body>Loading...</body></html>"
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.status_code = 200
+
+    with patch('requests.request', return_value=mock_resp):
+        results = scraper.fetch_opportunities()
+
+    assert results == []
