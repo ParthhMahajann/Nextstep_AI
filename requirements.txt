@@ -14,8 +14,12 @@ requests>=2.31
 beautifulsoup4>=4.12
 lxml>=5.1
 
-# Scheduling (used by scrapers/scheduler.py)
+# Scheduling
 apscheduler>=3.10
+
+# Async Tasks
+celery[redis]>=5.3
+redis>=5.0
 
 # ML & NLP (Phase 2)
 scikit-learn>=1.4
@@ -26,12 +30,10 @@ numpy>=1.26
 groq>=0.4.0
 openai>=1.10
 
-# Async Tasks (Optional - for production)
-# celery>=5.3
-# redis>=5.0
-
 # Development
 python-dotenv>=1.0
+pytest>=7.4
+pytest-django>=4.7
 
 # Resume File Parsing
 PyPDF2>=3.0
