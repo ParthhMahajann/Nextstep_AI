@@ -241,3 +241,83 @@ def test_adzuna_raises_without_credentials():
     scraper = AdzunaScraper()
     with pytest.raises(ValueError, match="ADZUNA_APP_ID"):
         scraper.fetch_opportunities()
+
+
+MUSE_RESPONSE_PAGE0 = {
+    "page": 1,
+    "page_count": 2,
+    "results": [
+        {
+            "id": 11111,
+            "name": "Senior Software Engineer",
+            "contents": "<p>Build great products remotely.</p>",
+            "locations": [{"name": "Flexible / Remote"}],
+            "company": {"name": "RemoteCo"},
+            "refs": {"landing_page": "https://www.themuse.com/jobs/remoteco/senior-software-engineer"},
+            "categories": [{"name": "Software Engineer"}],
+            "publication_date": "2026-04-20T00:00:00Z",
+        }
+    ],
+}
+
+MUSE_RESPONSE_EMPTY = {"page": 2, "page_count": 2, "results": []}
+
+
+@pytest.mark.django_db
+def test_themuse_parses_response():
+    from themuse_scraper import TheMuseScraper
+
+    scraper = TheMuseScraper(limit=10)
+
+    def side_effect(*args, **kwargs):
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.status_code = 200
+        params = kwargs.get('params', {})
+        if params.get('page', 0) == 0:
+            resp.json.return_value = MUSE_RESPONSE_PAGE0
+        else:
+            resp.json.return_value = MUSE_RESPONSE_EMPTY
+        return resp
+
+    with patch('requests.request', side_effect=side_effect):
+        results = scraper.fetch_opportunities()
+
+    assert len(results) >= 1
+    assert results[0].title == "Senior Software Engineer"
+    assert results[0].company == "RemoteCo"
+    assert "remote" in results[0].location.lower()
+    assert results[0].apply_link == "https://www.themuse.com/jobs/remoteco/senior-software-engineer"
+    assert results[0].source == "themuse"
+
+
+@pytest.mark.django_db
+def test_themuse_skips_entries_without_apply_link():
+    from themuse_scraper import TheMuseScraper
+
+    scraper = TheMuseScraper(limit=10)
+
+    no_link_response = {
+        "page": 1,
+        "page_count": 1,
+        "results": [
+            {
+                "id": 22222,
+                "name": "Designer",
+                "contents": "<p>Design stuff.</p>",
+                "locations": [{"name": "Flexible / Remote"}],
+                "company": {"name": "DesignCo"},
+                "refs": {},
+                "categories": [{"name": "Design"}],
+            }
+        ],
+    }
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = no_link_response
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.status_code = 200
+
+    with patch('requests.request', return_value=mock_resp):
+        results = scraper.fetch_opportunities()
+
+    assert len(results) == 0
