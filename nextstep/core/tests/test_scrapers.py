@@ -421,6 +421,21 @@ def test_task_run_adzuna_is_properly_registered():
     assert run_adzuna.queue == 'api_queue'
 
 
+from django.core.management import call_command
+from io import StringIO
+
+
+def test_scraper_status_command_runs_without_error():
+    """scraper_status command should print output without raising exceptions."""
+    out = StringIO()
+    try:
+        call_command('scraper_status', stdout=out)
+    except Exception as e:
+        pytest.fail(f"scraper_status command raised: {e}")
+    output = out.getvalue()
+    assert 'SOURCE' in output.upper() or 'scraper' in output.lower() or 'never' in output.lower()
+
+
 UNSTOP_JOBS_HTML = """<html><head></head><body>
 <script id="__NEXT_DATA__" type="application/json">
 {
