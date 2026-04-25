@@ -321,3 +321,79 @@ def test_themuse_skips_entries_without_apply_link():
         results = scraper.fetch_opportunities()
 
     assert len(results) == 0
+
+
+import json
+
+WELLFOUND_HTML = """<html><head></head><body>
+<script id="__NEXT_DATA__" type="application/json">
+{
+  "props": {
+    "pageProps": {
+      "jobs": [
+        {
+          "id": 9001,
+          "title": "Backend Engineer",
+          "slug": "backend-engineer-startup-9001",
+          "remote": true,
+          "description": "Join our fully remote startup team.",
+          "startup": {"name": "CoolStartup"},
+          "locations": []
+        },
+        {
+          "id": 9002,
+          "title": "Frontend Intern",
+          "slug": "frontend-intern-9002",
+          "remote": false,
+          "description": "Internship at our Bangalore office.",
+          "startup": {"name": "AnotherStartup"},
+          "locations": ["Bangalore"]
+        }
+      ]
+    }
+  }
+}
+</script>
+</body></html>"""
+
+
+@pytest.mark.django_db
+def test_wellfound_extracts_next_data():
+    from wellfound_scraper import WellfoundScraper
+
+    scraper = WellfoundScraper(limit=10)
+
+    mock_resp = MagicMock()
+    mock_resp.text = WELLFOUND_HTML
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.status_code = 200
+
+    with patch('requests.request', return_value=mock_resp):
+        results = scraper.fetch_opportunities()
+
+    assert len(results) == 2
+    backend = next(r for r in results if "Backend" in r.title)
+    assert backend.company == "CoolStartup"
+    assert "remote" in backend.location.lower()
+    assert "wellfound.com/jobs/" in backend.apply_link
+    assert backend.source == "wellfound"
+
+    intern_job = next(r for r in results if "Intern" in r.title)
+    assert intern_job.job_type == "internship"
+
+
+@pytest.mark.django_db
+def test_wellfound_returns_empty_when_no_next_data():
+    from wellfound_scraper import WellfoundScraper
+
+    scraper = WellfoundScraper(limit=10)
+
+    mock_resp = MagicMock()
+    mock_resp.text = "<html><body><p>Loading...</p></body></html>"
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.status_code = 200
+
+    with patch('requests.request', return_value=mock_resp):
+        results = scraper.fetch_opportunities()
+
+    assert results == []
