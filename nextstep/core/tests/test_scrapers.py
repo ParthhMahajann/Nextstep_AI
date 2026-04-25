@@ -399,6 +399,28 @@ def test_wellfound_returns_empty_when_no_next_data():
     assert results == []
 
 
+def test_all_expected_tasks_exist():
+    """All 10 scraper tasks must be importable from scrapers.tasks."""
+    from scrapers import tasks
+
+    expected = [
+        'run_remotive', 'run_arbeitnow', 'run_adzuna', 'run_themuse',
+        'run_jsearch', 'run_internshala', 'run_wellfound', 'run_unstop',
+        'run_reddit', 'run_hackernews',
+    ]
+    for name in expected:
+        assert hasattr(tasks, name), f"Missing task: scrapers.tasks.{name}"
+
+
+def test_task_run_adzuna_is_properly_registered():
+    """run_adzuna is a Celery task on the api_queue with the correct name."""
+    from scrapers.tasks import run_adzuna
+    assert hasattr(run_adzuna, 'delay')
+    assert hasattr(run_adzuna, 'apply_async')
+    assert run_adzuna.name == 'scrapers.tasks.run_adzuna'
+    assert run_adzuna.queue == 'api_queue'
+
+
 UNSTOP_JOBS_HTML = """<html><head></head><body>
 <script id="__NEXT_DATA__" type="application/json">
 {
