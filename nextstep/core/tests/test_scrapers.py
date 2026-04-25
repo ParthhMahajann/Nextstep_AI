@@ -155,3 +155,89 @@ def test_reddit_falls_back_to_anonymous_without_credentials(monkeypatch):
 
     called_url = mock_get.call_args[0][0]
     assert 'reddit.com/r/' in called_url
+
+
+ADZUNA_RESPONSE = {
+    "results": [
+        {
+            "id": "4191538546",
+            "title": "Python Backend Developer",
+            "description": "We need a Python dev with Django experience for our Bangalore office.",
+            "redirect_url": "https://www.adzuna.in/land/ad/4191538546",
+            "company": {"display_name": "TechStartup India"},
+            "location": {"display_name": "Bangalore, Karnataka"},
+            "contract_time": "full_time",
+            "contract_type": "permanent",
+            "created": "2026-04-20T10:00:00Z",
+        },
+        {
+            "id": "9999999999",
+            "title": "Junior Data Analyst",
+            "description": "Remote position open to candidates across India.",
+            "redirect_url": "https://www.adzuna.in/land/ad/9999999999",
+            "company": {"display_name": "DataCo"},
+            "location": {"display_name": "Remote"},
+            "contract_time": "full_time",
+            "contract_type": "permanent",
+            "created": "2026-04-21T10:00:00Z",
+        },
+    ]
+}
+
+
+@pytest.mark.django_db
+def test_adzuna_parses_response(monkeypatch):
+    from adzuna_scraper import AdzunaScraper
+
+    monkeypatch.setenv("ADZUNA_APP_ID", "test_id")
+    monkeypatch.setenv("ADZUNA_APP_KEY", "test_key")
+
+    scraper = AdzunaScraper(limit=10, queries=["python developer"])
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = ADZUNA_RESPONSE
+    mock_response.raise_for_status = MagicMock()
+    mock_response.status_code = 200
+
+    with patch('requests.request', return_value=mock_response):
+        results = scraper.fetch_opportunities()
+
+    assert len(results) == 2
+    assert results[0].title == "Python Backend Developer"
+    assert results[0].company == "TechStartup India"
+    assert results[0].location == "Bangalore, Karnataka"
+    assert results[0].job_type == "job"
+    assert results[0].apply_link == "https://www.adzuna.in/land/ad/4191538546"
+    assert results[0].source == "adzuna"
+
+
+@pytest.mark.django_db
+def test_adzuna_deduplicates_across_queries(monkeypatch):
+    from adzuna_scraper import AdzunaScraper
+
+    monkeypatch.setenv("ADZUNA_APP_ID", "test_id")
+    monkeypatch.setenv("ADZUNA_APP_KEY", "test_key")
+
+    scraper = AdzunaScraper(limit=10, queries=["query1", "query2"])
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = ADZUNA_RESPONSE
+    mock_response.raise_for_status = MagicMock()
+    mock_response.status_code = 200
+
+    with patch('requests.request', return_value=mock_response):
+        results = scraper.fetch_opportunities()
+
+    assert len(results) == 2
+
+
+@pytest.mark.django_db
+def test_adzuna_raises_without_credentials():
+    from adzuna_scraper import AdzunaScraper
+    import os
+    os.environ.pop("ADZUNA_APP_ID", None)
+    os.environ.pop("ADZUNA_APP_KEY", None)
+
+    scraper = AdzunaScraper()
+    with pytest.raises(ValueError, match="ADZUNA_APP_ID"):
+        scraper.fetch_opportunities()
