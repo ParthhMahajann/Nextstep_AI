@@ -47,6 +47,11 @@ from multi_reddit_scraper import MultiRedditScraper
 from hackernews_scraper import HackerNewsScraper
 from remotive_scraper import RemotiveScraper
 from jsearch_scraper import JSearchScraper
+from arbeitnow_scraper import ArbeitnowScraper
+from adzuna_scraper import AdzunaScraper
+from themuse_scraper import TheMuseScraper
+from wellfound_scraper import WellfoundScraper
+from unstop_scraper import UnstopScraper
 from data_validator import validate_opportunity
 
 
@@ -103,7 +108,7 @@ class ScraperOrchestrator:
             'class': MultiRedditScraper,
             'args': {'limit_per_sub': 25},
             'quick_args': {'limit_per_sub': 10},
-            'description': 'Reddit (multiple subreddits)',
+            'description': 'Reddit (India + remote subreddits, OAuth)',
         },
         'hackernews': {
             'class': HackerNewsScraper,
@@ -119,24 +124,48 @@ class ScraperOrchestrator:
         },
         'jsearch': {
             'class': JSearchScraper,
-            'args': {'limit': 80},
+            'args': {'limit': 60},
             'quick_args': {'limit': 20},
             'description': 'JSearch (LinkedIn, Indeed, Glassdoor via RapidAPI)',
         },
-    }
-    
-    OPTIONAL_SCRAPERS = {
-        'internshala': {
-            'class': None,
-            'args': {'max_per_category': 10},
-            'quick_args': {'max_per_category': 5},
-            'description': 'Internshala (India internships)',
-        },
         'arbeitnow': {
-            'class': None,
+            'class': ArbeitnowScraper,
             'args': {'limit': 50},
             'quick_args': {'limit': 20},
             'description': 'Arbeitnow (Remote/Startup jobs)',
+        },
+        'adzuna': {
+            'class': AdzunaScraper,
+            'args': {'limit': 120},
+            'quick_args': {'limit': 30},
+            'description': 'Adzuna India (free API, 200 calls/day)',
+        },
+        'themuse': {
+            'class': TheMuseScraper,
+            'args': {'limit': 100},
+            'quick_args': {'limit': 30},
+            'description': 'The Muse (free API, remote-first jobs)',
+        },
+        'wellfound': {
+            'class': WellfoundScraper,
+            'args': {'limit': 80},
+            'quick_args': {'limit': 20},
+            'description': 'Wellfound startup jobs',
+        },
+        'unstop': {
+            'class': UnstopScraper,
+            'args': {'limit': 60},
+            'quick_args': {'limit': 20},
+            'description': 'Unstop (India freshers + internships)',
+        },
+    }
+
+    OPTIONAL_SCRAPERS = {
+        'internshala': {
+            'class': None,
+            'args': {'max_per_category': 15},
+            'quick_args': {'max_per_category': 5},
+            'description': 'Internshala (India internships)',
         },
     }
     
