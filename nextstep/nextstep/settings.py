@@ -114,6 +114,15 @@ CELERY_TIMEZONE = 'Asia/Kolkata'  # intentionally differs from TIME_ZONE=UTC; cr
 CELERY_TASK_TRACK_STARTED = True
 
 
+# ── Cache (Redis db 1 — separate from Celery's db 0) ─────────────────────────
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('REDIS_CACHE_URL', 'redis://localhost:6379/1'),
+    }
+}
+
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

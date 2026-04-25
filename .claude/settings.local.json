@@ -38,7 +38,23 @@
       "Bash(python *)",
       "Bash(curl *)",
       "Bash(cd /d D:\\\\Nextstep_AI\\\\frontend)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(pip install *)",
+      "Bash(pytest --collect-only)",
+      "Bash(git rm *)",
+      "Bash(where scoop *)",
+      "Bash(where choco *)",
+      "Bash(where winget *)",
+      "Bash(where python *)",
+      "Bash(pip list *)",
+      "Bash(where.exe /R \"C:\\\\Program Files\" redis-cli.exe)",
+      "Bash(where.exe /R \"C:\\\\ProgramData\\\\chocolatey\" redis-cli.exe)",
+      "Bash(where.exe /R \"C:\\\\tools\" redis-cli.exe)",
+      "Read(//c/ProgramData/chocolatey/lib/redis-64/**)",
+      "Read(//c/Program Files/Memurai/**)",
+      "Read(//c/Program Files/**)"
     ]
   }
 }
