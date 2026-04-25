@@ -9,6 +9,7 @@ import os
 import sys
 import logging
 import requests
+import requests.auth
 from typing import List, Dict
 
 # Setup Django
@@ -89,6 +90,26 @@ class MultiRedditScraper(BaseScraper):
         self.limit_per_sub = limit_per_sub
         self.filter_india_remote = filter_india_remote
     
+    def _get_oauth_token(self) -> str:
+        """Fetch a Reddit OAuth access token (client_credentials flow). Returns empty string on failure."""
+        client_id = os.environ.get("REDDIT_CLIENT_ID", "")
+        client_secret = os.environ.get("REDDIT_CLIENT_SECRET", "")
+        if not client_id or not client_secret:
+            return ""
+        try:
+            resp = requests.post(
+                "https://www.reddit.com/api/v1/access_token",
+                auth=requests.auth.HTTPBasicAuth(client_id, client_secret),
+                data={"grant_type": "client_credentials"},
+                headers={"User-Agent": "NextStepAI/1.0"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json().get("access_token", "")
+        except Exception as e:
+            logger.warning(f"Reddit OAuth token fetch failed, falling back to anonymous: {e}")
+            return ""
+
     def _detect_job_type(self, text: str, default: str = 'job') -> str:
         """Detect job type from post content."""
         text_lower = text.lower()
@@ -135,8 +156,14 @@ class MultiRedditScraper(BaseScraper):
         try:
             self._respect_rate_limit()
             
-            url = f"https://www.reddit.com/r/{subreddit}/new.json?limit={self.limit_per_sub}"
-            response = requests.get(url, headers=self.headers, timeout=15)
+            token = self._get_oauth_token()
+            if token:
+                url = f"https://oauth.reddit.com/r/{subreddit}/new?limit={self.limit_per_sub}"
+                headers = {**self.headers, "Authorization": f"bearer {token}"}
+            else:
+                url = f"https://www.reddit.com/r/{subreddit}/new.json?limit={self.limit_per_sub}"
+                headers = self.headers
+            response = requests.get(url, headers=headers, timeout=15)
             response.raise_for_status()
             
             data = response.json()

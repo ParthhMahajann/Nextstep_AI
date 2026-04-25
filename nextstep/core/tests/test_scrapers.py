@@ -83,3 +83,75 @@ def test_internshala_wfh_sets_remote_location():
     wfh = [r for r in results if 'web' in r.title.lower()]
     assert wfh, "Should have WFH result"
     assert 'remote' in wfh[0].location.lower() or 'work from home' in wfh[0].location.lower()
+
+
+REDDIT_TOKEN_RESPONSE = {"access_token": "test_token_abc123", "token_type": "bearer"}
+
+REDDIT_POSTS_RESPONSE = {
+    "data": {
+        "children": [
+            {
+                "data": {
+                    "title": "[Hiring] Python Developer - Remote India",
+                    "selftext": "Looking for a Python dev to work remotely from India. Django experience required.",
+                    "permalink": "/r/forhire/comments/abc123/hiring_python_developer",
+                }
+            },
+            {
+                "data": {
+                    "title": "Discussion: best tech jobs in Bangalore?",
+                    "selftext": "What companies are hiring in Bangalore right now?",
+                    "permalink": "/r/developersIndia/comments/def456/discussion",
+                }
+            },
+        ]
+    }
+}
+
+
+@pytest.mark.django_db
+def test_reddit_uses_oauth_when_credentials_set(monkeypatch):
+    from multi_reddit_scraper import MultiRedditScraper
+
+    monkeypatch.setenv("REDDIT_CLIENT_ID", "fake_id")
+    monkeypatch.setenv("REDDIT_CLIENT_SECRET", "fake_secret")
+
+    scraper = MultiRedditScraper(subreddits=['forhire'], limit_per_sub=10)
+
+    token_resp = MagicMock()
+    token_resp.json.return_value = REDDIT_TOKEN_RESPONSE
+    token_resp.raise_for_status = MagicMock()
+
+    posts_resp = MagicMock()
+    posts_resp.json.return_value = REDDIT_POSTS_RESPONSE
+    posts_resp.raise_for_status = MagicMock()
+
+    with patch('requests.post', return_value=token_resp) as mock_post, \
+         patch('requests.get', return_value=posts_resp):
+        results = scraper.fetch_opportunities()
+
+    mock_post.assert_called_once()
+    call_url = mock_post.call_args[0][0]
+    assert 'access_token' in call_url
+
+    assert len(results) >= 1
+
+
+@pytest.mark.django_db
+def test_reddit_falls_back_to_anonymous_without_credentials(monkeypatch):
+    from multi_reddit_scraper import MultiRedditScraper
+
+    monkeypatch.delenv("REDDIT_CLIENT_ID", raising=False)
+    monkeypatch.delenv("REDDIT_CLIENT_SECRET", raising=False)
+
+    scraper = MultiRedditScraper(subreddits=['forhire'], limit_per_sub=10)
+
+    posts_resp = MagicMock()
+    posts_resp.json.return_value = REDDIT_POSTS_RESPONSE
+    posts_resp.raise_for_status = MagicMock()
+
+    with patch('requests.get', return_value=posts_resp) as mock_get:
+        results = scraper.fetch_opportunities()
+
+    called_url = mock_get.call_args[0][0]
+    assert 'reddit.com/r/' in called_url
