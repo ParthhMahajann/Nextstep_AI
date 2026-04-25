@@ -132,12 +132,6 @@ class ScraperOrchestrator:
             'quick_args': {'max_per_category': 5},
             'description': 'Internshala (India internships)',
         },
-        'ncs': {
-            'class': None,
-            'args': {'limit': 30},
-            'quick_args': {'limit': 15},
-            'description': 'National Career Service (Govt jobs)',
-        },
         'arbeitnow': {
             'class': None,
             'args': {'limit': 50},
