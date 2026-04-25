@@ -110,7 +110,7 @@ CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localho
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TIMEZONE = 'Asia/Kolkata'
+CELERY_TIMEZONE = 'Asia/Kolkata'  # intentionally differs from TIME_ZONE=UTC; crontab schedules run in IST
 CELERY_TASK_TRACK_STARTED = True
 
 
