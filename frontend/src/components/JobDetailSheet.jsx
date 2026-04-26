@@ -339,6 +339,7 @@ export function JobDetailSheet({ job, onClose, onApply, onSave }) {
                     }}>
                         <button
                             onClick={onClose}
+                            aria-label="Go back"
                             style={{
                                 width: 44, height: 44, borderRadius: 12,
                                 background: '#f3f3f3', border: '1px solid #e1e1e1',
