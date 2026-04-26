@@ -106,6 +106,7 @@ function JobCard({ item, onRemove }) {
                 overflow: 'hidden',
                 transition: 'border-color 0.2s',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                minHeight: 64,
             }}
         >
             {/* Main row */}
@@ -141,7 +142,7 @@ function JobCard({ item, onRemove }) {
                         </a>
                     )}
                     <button onClick={() => setExpanded(v => !v)}
-                        style={{ width: 34, height: 34, borderRadius: 10, background: expanded ? 'rgba(230,0,35,0.06)' : '#f3f3f3', border: '1px solid #e1e1e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: expanded ? '#e60023' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                        style={{ padding: '12px 16px', borderRadius: 10, background: expanded ? 'rgba(230,0,35,0.06)' : '#f3f3f3', border: '1px solid #e1e1e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: expanded ? '#e60023' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}>
                         {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </button>
                     <button onClick={() => onRemove(item.id)}
