@@ -144,12 +144,12 @@ export function DiscoverPage() {
                                         </div>
                                     )}
                                     <button onClick={() => setShowSearch(true)}
-                                        style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                                        style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
                                         <Search size={15} />
                                     </button>
                                     <button
                                         onClick={() => { setLocalFilters(filters); setShowFilters(true); }}
-                                        style={{ width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: activeFilterCount > 0 ? 'rgba(230,0,35,0.08)' : 'var(--bg-elevated)', border: activeFilterCount > 0 ? '1px solid rgba(230,0,35,0.25)' : '1px solid var(--border)', color: activeFilterCount > 0 ? '#e60023' : 'var(--text-muted)' }}
+                                        style={{ width: 44, height: 44, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: activeFilterCount > 0 ? 'rgba(230,0,35,0.08)' : 'var(--bg-elevated)', border: activeFilterCount > 0 ? '1px solid rgba(230,0,35,0.25)' : '1px solid var(--border)', color: activeFilterCount > 0 ? '#e60023' : 'var(--text-muted)' }}
                                     >
                                         <SlidersHorizontal size={15} />
                                         {activeFilterCount > 0 && (
@@ -159,7 +159,7 @@ export function DiscoverPage() {
                                         )}
                                     </button>
                                     <button onClick={fetchRecommended}
-                                        style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                                        style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
                                         <RefreshCw size={15} />
                                     </button>
                                 </div>
@@ -252,10 +252,16 @@ export function DiscoverPage() {
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
                             style={{ marginTop: 16, textAlign: 'center' }}
                         >
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 20, fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
-                                <span>← skip</span>
-                                <span style={{ color: '#e60023', fontWeight: 600 }}>↑ save</span>
-                                <span style={{ color: '#e60023', fontWeight: 600 }}>→ apply · tap for details</span>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 99, background: '#f3f3f3', border: '1px solid #e1e1e1', fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+                                    ← Skip
+                                </span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 99, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', fontSize: 11, color: '#d97706', fontWeight: 600 }}>
+                                    ↑ Save
+                                </span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 99, background: 'rgba(230,0,35,0.08)', border: '1px solid rgba(230,0,35,0.2)', fontSize: 11, color: '#e60023', fontWeight: 600 }}>
+                                    → Apply · tap for details
+                                </span>
                             </div>
                         </motion.div>
                     </div>
