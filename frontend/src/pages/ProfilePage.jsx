@@ -10,8 +10,9 @@ import {
     User, Mail, Phone, Briefcase, GraduationCap,
     Link as LinkIcon, Edit2, Check, X, FileText,
     Github, Linkedin, Globe, Zap, LogOut, MapPin,
-    ChevronRight, Plus, Trash2, Search
+    ChevronRight, Plus, Trash2, Search, Settings
 } from 'lucide-react';
+import { NotificationCenter } from '../components/NotificationCenter';
 import { useAuthStore } from '../store/authStore';
 import { skillsAPI, profileAPI } from '../api/client';
 import { useToast } from '../components/Toast';
@@ -172,7 +173,7 @@ function SkillsPanel({ profile, onRefresh }) {
                                 onChange={e => setQuery(e.target.value)}
                                 placeholder="Search skills to add…"
                                 autoFocus
-                                style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, padding: '10px 0' }}
+                                style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, padding: '10px 0', width: '100%', minWidth: 0 }}
                             />
                         </div>
                         {filtered.length > 0 && (
@@ -313,6 +314,21 @@ export function ProfilePage() {
 
                 {/* Identity card */}
                 <SectionCard>
+                    {/* Profile header action row */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                        <NotificationCenter />
+                        <Link
+                            to="/settings"
+                            style={{
+                                width: 40, height: 40, borderRadius: 12,
+                                background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'var(--text-muted)', textDecoration: 'none',
+                            }}
+                        >
+                            <Settings size={18} />
+                        </Link>
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
                         <div style={{ width: 64, height: 64, borderRadius: '50%', flexShrink: 0, background: '#e60023', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, color: '#fff', fontWeight: 800, boxShadow: '0 4px 16px rgba(230,0,35,0.25)' }}>
                             {initial}
@@ -342,15 +358,15 @@ export function ProfilePage() {
 
                     {/* Phone & Exp Level row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        <div>
+                        <div className="profile-field-row">
                             <Label>Phone</Label>
                             {editing ? (
-                                <input className="input" placeholder="Phone number" value={form.phone} style={{ fontSize: 14 }} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
+                                <input className="input" placeholder="Phone number" value={form.phone} style={{ fontSize: 14, width: '100%', minWidth: 0 }} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
                             ) : (
                                 <p style={{ color: profile?.phone ? 'var(--text-secondary)' : 'var(--text-muted)', fontSize: 14 }}>{profile?.phone || '—'}</p>
                             )}
                         </div>
-                        <div>
+                        <div className="profile-field-row">
                             <Label>Experience Level</Label>
                             {editing ? (
                                 <select className="input" style={{ cursor: 'pointer', fontSize: 14 }} value={form.experience_level} onChange={e => setForm(p => ({ ...p, experience_level: e.target.value }))}>
