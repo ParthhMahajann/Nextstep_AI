@@ -922,3 +922,8 @@ textarea.input { resize: vertical; min-height: 100px; }
     width: 100% !important;
   }
 }
+
+/* Kanban mobile scroll — hide WebKit scrollbar */
+.kanban-mobile-scroll::-webkit-scrollbar {
+    display: none;
+}

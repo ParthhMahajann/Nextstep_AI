@@ -190,7 +190,10 @@ export function KanbanPage() {
     useEffect(() => { load(); }, []);
 
     useEffect(() => {
-        if (!isMobile) return;
+        if (!isMobile) {
+            setActiveColIndex(0);
+            return;
+        }
         const el = scrollRef.current;
         if (!el) return;
         const onScroll = () => {
@@ -261,12 +264,14 @@ export function KanbanPage() {
             {/* Kanban board — horizontal scroll */}
             <div
                 ref={isMobile ? scrollRef : undefined}
+                className={isMobile ? 'kanban-mobile-scroll' : undefined}
                 style={isMobile ? {
                     display: 'flex',
                     gap: 12,
                     overflowX: 'auto',
                     scrollSnapType: 'x mandatory',
                     WebkitOverflowScrolling: 'touch',
+                    paddingTop: 16,
                     paddingBottom: 8,
                     paddingLeft: 16,
                     paddingRight: 16,
