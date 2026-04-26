@@ -59,17 +59,19 @@ export function OnboardingModal({ onDone }) {
 
     return (
         <>
-            {/* Backdrop */}
-            <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 500 }}
-            />
+            {/* Backdrop — desktop only */}
+            {!isMobile && (
+                <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 500 }}
+                />
+            )}
 
             {/* Modal */}
             <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+                initial={isMobile ? { opacity: 0, y: 30 } : { opacity: 0, scale: 0.9, y: 20 }}
+                animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+                exit={isMobile ? { opacity: 0, y: 30 } : { opacity: 0, scale: 0.9 }}
                 transition={{ type: 'spring', damping: 22, stiffness: 280 }}
                 style={isMobile ? {
                     position: 'fixed', inset: 0, zIndex: 501,

@@ -270,7 +270,6 @@ export function ApplyModal({ job, savedJobId, onClose, onApply }) {
                 transition={{ type: 'spring', stiffness: 300, damping: 32 }}
                 style={isMobile ? {
                     width: '100%',
-                    height: '100dvh',
                     background: '#ffffff',
                     display: 'flex',
                     flexDirection: 'column',
@@ -311,7 +310,7 @@ export function ApplyModal({ job, savedJobId, onClose, onApply }) {
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: '#f3f3f3', border: '1px solid #e1e1e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    <button onClick={onClose} aria-label="Close" className="btn-icon" style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: '#f3f3f3', border: '1px solid #e1e1e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -336,7 +335,7 @@ export function ApplyModal({ job, savedJobId, onClose, onApply }) {
                 </div>
 
                 {/* Body */}
-                <div className="modal-scroll" style={{ padding: '0 20px 16px', minHeight: 140 }}>
+                <div className="modal-scroll" style={{ padding: '0 20px 16px', minHeight: 140, flex: 1, overflowY: 'auto' }}>
                     <AnimatePresence mode="wait">
                         <motion.div key={activeTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
                             {activeTab === 'email'  && <EmailTab       job={job} savedJobId={savedJobId} />}
