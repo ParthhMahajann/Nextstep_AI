@@ -39,8 +39,8 @@ export function ResetPasswordPage() {
 
     if (!token) {
         return (
-            <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', zIndex: 1 }}>
-                <div className="glass-card" style={{ padding: 40, textAlign: 'center', maxWidth: 400, width: '100%' }}>
+            <div className="auth-page">
+                <div className="glass-card auth-card" style={{ padding: 40, textAlign: 'center', maxWidth: 400, width: '100%' }}>
                     <p style={{ color: '#f87171', marginBottom: 20, fontSize: 15 }}>
                         Invalid reset link. Please request a new one.
                     </p>
@@ -53,15 +53,12 @@ export function ResetPasswordPage() {
     }
 
     return (
-        <div style={{
-            minHeight: '100dvh',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 24, position: 'relative', zIndex: 1,
-        }}>
+        <div className="auth-page">
             <motion.div
                 initial={{ opacity: 0, y: 24, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                className="auth-card"
                 style={{ width: '100%', maxWidth: 420 }}
             >
                 {/* Logo */}
@@ -120,6 +117,7 @@ export function ResetPasswordPage() {
                                         placeholder="New password"
                                         value={password}
                                         onChange={e => setPassword(e.target.value)}
+                                        autoComplete="new-password"
                                         required
                                     />
                                     <button type="button" onClick={() => setShowPw(v => !v)}
@@ -137,6 +135,7 @@ export function ResetPasswordPage() {
                                         placeholder="Confirm new password"
                                         value={passwordConfirm}
                                         onChange={e => setPasswordConfirm(e.target.value)}
+                                        autoComplete="new-password"
                                         required
                                     />
                                 </div>
