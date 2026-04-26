@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Building2, MapPin, ExternalLink, Briefcase, Sparkles,
+    X, ArrowLeft, Building2, MapPin, ExternalLink, Briefcase, Sparkles,
     CheckCircle2, XCircle, ChevronDown, ChevronUp, BrainCircuit, Search, Layers
 } from 'lucide-react';
 import { jobsAPI, aiAPI } from '../api/client';
@@ -346,7 +346,7 @@ export function JobDetailSheet({ job, onClose, onApply, onSave }) {
                                 color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0,
                             }}
                         >
-                            <X size={18} />
+                            <ArrowLeft size={18} />
                         </button>
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-primary)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{job.title}</p>
