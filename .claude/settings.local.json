@@ -54,7 +54,13 @@
       "Bash(where.exe /R \"C:\\\\tools\" redis-cli.exe)",
       "Read(//c/ProgramData/chocolatey/lib/redis-64/**)",
       "Read(//c/Program Files/Memurai/**)",
-      "Read(//c/Program Files/**)"
+      "Read(//c/Program Files/**)",
+      "Bash(bash *)",
+      "Bash(ls -d .worktrees)",
+      "Bash(ls -d worktrees)",
+      "Bash(grep -i \"worktree.*director\" CLAUDE.md)",
+      "Bash(git push *)",
+      "Bash(git *)"
     ]
   }
 }
