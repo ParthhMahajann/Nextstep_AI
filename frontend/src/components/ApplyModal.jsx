@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { aiAPI, savedJobsAPI } from '../api/client';
 import { useToast } from './Toast';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const TABS = [
     { key: 'email',  label: 'Cold Email',    icon: Mail     },
@@ -243,6 +244,7 @@ function TipsTab({ job }) {
 
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 export function ApplyModal({ job, savedJobId, onClose, onApply }) {
+    const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState('email');
 
     return (
@@ -250,7 +252,15 @@ export function ApplyModal({ job, savedJobId, onClose, onApply }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 350 }}
+            style={{
+                    position: 'fixed', inset: 0,
+                    background: isMobile ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.6)',
+                    backdropFilter: isMobile ? 'none' : 'blur(6px)',
+                    display: 'flex',
+                    alignItems: isMobile ? 'stretch' : 'flex-end',
+                    justifyContent: 'center',
+                    zIndex: 350,
+                }}
             onClick={onClose}
         >
             <motion.div
@@ -258,7 +268,24 @@ export function ApplyModal({ job, savedJobId, onClose, onApply }) {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: '100%', opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 32 }}
-                style={{ background: '#ffffff', border: '1px solid #e1e1e1', borderBottom: 'none', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 520, maxHeight: '88vh', overflow: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.12)' }}
+                style={isMobile ? {
+                    width: '100%',
+                    height: '100dvh',
+                    background: '#ffffff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                } : {
+                    background: '#ffffff',
+                    border: '1px solid #e1e1e1',
+                    borderBottom: 'none',
+                    borderRadius: '24px 24px 0 0',
+                    width: '100%',
+                    maxWidth: 520,
+                    maxHeight: '88vh',
+                    overflow: 'auto',
+                    boxShadow: '0 -4px 32px rgba(0,0,0,0.12)',
+                }}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Handle */}
@@ -309,7 +336,7 @@ export function ApplyModal({ job, savedJobId, onClose, onApply }) {
                 </div>
 
                 {/* Body */}
-                <div style={{ padding: '0 20px 16px', minHeight: 140 }}>
+                <div className="modal-scroll" style={{ padding: '0 20px 16px', minHeight: 140 }}>
                     <AnimatePresence mode="wait">
                         <motion.div key={activeTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
                             {activeTab === 'email'  && <EmailTab       job={job} savedJobId={savedJobId} />}
