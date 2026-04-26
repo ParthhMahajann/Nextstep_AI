@@ -130,11 +130,6 @@ body {
   transition: box-shadow var(--t-base), border-color var(--t-base);
 }
 
-.glass-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-hover);
-}
-
 /* ═══════════════════════════════════════════════════════════
    BUTTONS
    ═══════════════════════════════════════════════════════════ */
@@ -163,12 +158,6 @@ body {
   background: var(--primary);
   color: #fff;
   box-shadow: 0 2px 8px rgba(230,0,35,0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(230,0,35,0.35);
 }
 
 .btn-primary:active:not(:disabled) { transform: translateY(0); }
@@ -317,8 +306,7 @@ textarea.input { resize: vertical; min-height: 100px; }
   box-shadow: var(--shadow-sm);
 }
 
-.swipe-btn:hover:not(:disabled) { transform: scale(1.1); box-shadow: var(--shadow-md); }
-.swipe-btn:active:not(:disabled) { transform: scale(0.95); }
+.swipe-btn:active:not(:disabled) { transform: scale(0.93); }
 .swipe-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .swipe-btn-skip {
@@ -522,7 +510,7 @@ textarea.input { resize: vertical; min-height: 100px; }
 .page { min-height: 100dvh; padding-bottom: 0; }
 
 @media (max-width: 767px) {
-  .page { padding-bottom: 80px; }
+  .page { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
 
 @media (min-width: 768px) {
@@ -819,12 +807,6 @@ textarea.input { resize: vertical; min-height: 100px; }
   padding-bottom: max(12px, env(safe-area-inset-bottom));
 }
 
-@media (max-width: 767px) {
-  .page {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
-  }
-}
-
 /* Prevent iOS auto-zoom on input focus (requires font-size >= 16px) */
 @media (max-width: 767px) {
   input, select, textarea {
@@ -836,7 +818,9 @@ textarea.input { resize: vertical; min-height: 100px; }
    so transform: translateY(-1px) would stick after tap */
 @media (hover: hover) {
   .btn-primary:hover:not(:disabled) {
+    background: var(--primary-dark);
     transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(230,0,35,0.35);
   }
   .glass-card:hover {
     box-shadow: var(--shadow-md);
@@ -852,9 +836,6 @@ textarea.input { resize: vertical; min-height: 100px; }
 .btn:active:not(:disabled) {
   transform: scale(0.97);
 }
-.swipe-btn:active:not(:disabled) {
-  transform: scale(0.93) !important;
-}
 .nav-item:active {
   opacity: 0.7;
 }
@@ -862,7 +843,6 @@ textarea.input { resize: vertical; min-height: 100px; }
 /* Prevent pull-to-refresh from firing inside scrollable modals */
 .modal-scroll {
   overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* Touch target helpers — bump icon buttons to 44px on mobile */

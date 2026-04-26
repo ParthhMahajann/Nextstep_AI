@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 
 export function useIsMobile() {
     const [isMobile, setIsMobile] = useState(
-        () => window.matchMedia('(max-width: 767px)').matches
+        () => typeof window !== 'undefined'
+            ? window.matchMedia('(max-width: 767px)').matches
+            : false
     );
     useEffect(() => {
         const mq = window.matchMedia('(max-width: 767px)');
