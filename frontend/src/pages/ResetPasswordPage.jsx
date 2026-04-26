@@ -40,13 +40,15 @@ export function ResetPasswordPage() {
     if (!token) {
         return (
             <div className="auth-page">
-                <div className="glass-card auth-card" style={{ padding: 40, textAlign: 'center', maxWidth: 400, width: '100%' }}>
-                    <p style={{ color: '#f87171', marginBottom: 20, fontSize: 15 }}>
-                        Invalid reset link. Please request a new one.
-                    </p>
-                    <Link to="/forgot-password" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex' }}>
-                        Request Reset Link
-                    </Link>
+                <div className="auth-card" style={{ width: '100%', maxWidth: 420 }}>
+                    <div className="glass-card" style={{ padding: 40, textAlign: 'center' }}>
+                        <p style={{ color: '#f87171', marginBottom: 20, fontSize: 15 }}>
+                            Invalid reset link. Please request a new one.
+                        </p>
+                        <Link to="/forgot-password" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex' }}>
+                            Request Reset Link
+                        </Link>
+                    </div>
                 </div>
             </div>
         );
