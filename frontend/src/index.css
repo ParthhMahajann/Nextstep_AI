@@ -911,13 +911,19 @@ textarea.input { resize: vertical; min-height: 100px; }
 }
 
 /* Profile form — stack label above input on mobile */
+.profile-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 @media (max-width: 767px) {
   .profile-field-row {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 6px !important;
   }
-  .profile-field-row label {
+  .profile-field-row label,
+  .profile-field-row p {
     min-width: unset !important;
     width: 100% !important;
   }

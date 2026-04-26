@@ -301,6 +301,7 @@ export function ProfilePage() {
                                 </button>
                             </div>
                         )}
+                        <NotificationCenter />
                         <button onClick={logout} style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#f87171' }}>
                             <LogOut size={15} />
                         </button>
@@ -314,21 +315,6 @@ export function ProfilePage() {
 
                 {/* Identity card */}
                 <SectionCard>
-                    {/* Profile header action row */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                        <NotificationCenter />
-                        <Link
-                            to="/settings"
-                            style={{
-                                width: 40, height: 40, borderRadius: 12,
-                                background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: 'var(--text-muted)', textDecoration: 'none',
-                            }}
-                        >
-                            <Settings size={18} />
-                        </Link>
-                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
                         <div style={{ width: 64, height: 64, borderRadius: '50%', flexShrink: 0, background: '#e60023', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, color: '#fff', fontWeight: 800, boxShadow: '0 4px 16px rgba(230,0,35,0.25)' }}>
                             {initial}
