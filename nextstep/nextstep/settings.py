@@ -57,6 +57,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # serves frontend assets
     'corsheaders.middleware.CorsMiddleware',  # CORS - must be before CommonMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -142,6 +143,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Frontend SPA (React/Vite build output)
+FRONTEND_DIST_DIR = BASE_DIR.parent / 'frontend' / 'dist'
+WHITENOISE_ROOT = str(FRONTEND_DIST_DIR)
 
 # Media files (user uploads — resumes, etc.)
 MEDIA_URL = '/media/'
