@@ -65,7 +65,7 @@ function KanbanCard({ item, onMove, selected, onSelect }) {
             {/* Select checkbox */}
             <button
                 onClick={e => { e.stopPropagation(); onSelect(item.id); }}
-                style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: selected ? '#e60023' : '#c4c4c4' }}
+                style={{ position: 'absolute', top: 8, right: 8, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8, color: selected ? '#e60023' : '#c4c4c4' }}
             >
                 {selected ? <CheckSquare size={14} /> : <Square size={14} />}
             </button>
@@ -197,8 +197,8 @@ export function KanbanPage() {
         const el = scrollRef.current;
         if (!el) return;
         const onScroll = () => {
-            const colWidth = el.scrollWidth / COLUMNS.length;
-            setActiveColIndex(Math.round(el.scrollLeft / colWidth));
+            const COLUMN_STRIDE = 260 + 12; // minWidth + gap
+            setActiveColIndex(Math.round(el.scrollLeft / COLUMN_STRIDE));
         };
         el.addEventListener('scroll', onScroll, { passive: true });
         return () => el.removeEventListener('scroll', onScroll);

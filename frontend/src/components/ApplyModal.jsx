@@ -346,7 +346,7 @@ export function ApplyModal({ job, savedJobId, onClose, onApply }) {
                 </div>
 
                 {/* Footer */}
-                <div style={{ padding: '14px 20px 24px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: 10 }}>
+                <div style={{ padding: `14px 20px max(24px, calc(14px + env(safe-area-inset-bottom)))`, borderTop: '1px solid #f0f0f0', display: 'flex', gap: 10 }}>
                     {job.apply_link ? (
                         <a href={job.apply_link} target="_blank" rel="noopener noreferrer" onClick={onApply}
                             style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 20px', borderRadius: 14, textDecoration: 'none', fontWeight: 700, fontSize: 15, background: '#e60023', color: '#fff', boxShadow: '0 4px 16px rgba(230,0,35,0.3)' }}>

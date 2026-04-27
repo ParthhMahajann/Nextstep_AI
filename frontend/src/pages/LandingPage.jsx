@@ -159,14 +159,14 @@ export function LandingPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <Link to="/login" style={{
-                        padding: '7px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700,
+                        padding: '11px 16px', borderRadius: 999, fontSize: 13, fontWeight: 700,
                         color: '#111', textDecoration: 'none', border: '1.5px solid #e1e1e1',
                         background: '#fff', whiteSpace: 'nowrap',
                     }}>
                         Sign in
                     </Link>
                     <Link to="/signup" style={{
-                        padding: '7px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700,
+                        padding: '11px 16px', borderRadius: 999, fontSize: 13, fontWeight: 700,
                         color: '#fff', textDecoration: 'none', background: '#e60023',
                         boxShadow: '0 2px 8px rgba(230,0,35,0.3)', whiteSpace: 'nowrap',
                     }}>
@@ -238,14 +238,12 @@ export function LandingPage() {
                 {/* Stats row */}
                 <FadeUp delay={0.2}>
                     <div className="landing-stats-grid" style={{
-                        display: 'flex', gap: 0, justifyContent: 'center',
-                        marginTop: 56, flexWrap: 'wrap',
+                        marginTop: 56,
                         borderTop: '1px solid #f0f0f0', paddingTop: 36,
                     }}>
-                        {STATS.map(({ value, label }, i) => (
+                        {STATS.map(({ value, label }) => (
                             <div key={label} style={{
-                                flex: '1 1 120px', textAlign: 'center', padding: '0 24px',
-                                borderRight: i < STATS.length - 1 ? '1px solid #f0f0f0' : 'none',
+                                textAlign: 'center', padding: '0 24px',
                             }}>
                                 <p style={{ fontSize: 30, fontWeight: 900, color: '#e60023', letterSpacing: '-0.03em' }}>{value}</p>
                                 <p style={{ fontSize: 12, color: '#767676', marginTop: 4, fontWeight: 600 }}>{label}</p>

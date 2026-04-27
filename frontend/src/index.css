@@ -511,6 +511,8 @@ textarea.input { resize: vertical; min-height: 100px; }
 
 @media (max-width: 767px) {
   .page { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  /* Push sticky headers below the iPhone notch in PWA/standalone mode */
+  header { padding-top: max(16px, calc(12px + env(safe-area-inset-top))) !important; }
 }
 
 @media (min-width: 768px) {
