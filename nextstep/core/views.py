@@ -10,9 +10,6 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 from django.conf import settings
 from django.db.models import Q
 
@@ -56,45 +53,6 @@ class AIRateThrottle(UserRateThrottle):
 
 # ==================== Email Helper ====================
 
-def _send_templated_email(subject, template_name, context, recipient_email):
-    """
-    Send an HTML email using a Django template.
-    - SMTP mode  : sends a real email (requires EMAIL_HOST_USER/PASSWORD in .env)
-    - Console mode: prints email to terminal AND logs the action URL so devs can
-                    test the flow without needing real credentials.
-    """
-    try:
-        html_message = render_to_string(template_name, context)
-        plain_message = strip_tags(html_message)
-
-        # ── Pretty-print the action URL in non-SMTP mode for easy testing ──
-        from django.conf import settings as _s
-        if 'console' in _s.EMAIL_BACKEND.lower():
-            action_url = context.get('verification_url') or context.get('reset_url') or ''
-            if action_url:
-                logger.info(
-                    "\n\n"
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    f"  📧  EMAIL (console mode) → {recipient_email}\n"
-                    f"  Subject : {subject}\n"
-                    f"  ➜  ACTION URL:\n"
-                    f"     {action_url}\n"
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                )
-
-        send_mail(
-            subject=subject,
-            message=plain_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[recipient_email],
-            html_message=html_message,
-            fail_silently=False,
-        )
-    except Exception as e:
-        logger.error(f"Failed to send email to {recipient_email}: {e}")
-
-
-
 # ==================== Auth Views ====================
 
 class RegisterView(generics.CreateAPIView):
@@ -106,19 +64,14 @@ class RegisterView(generics.CreateAPIView):
     throttle_classes = [AuthRateThrottle]
 
     def perform_create(self, serializer):
+        from .tasks import send_verification_email
         user = serializer.save()
         user.is_active = False
         user.save(update_fields=['is_active'])
 
-        # Create verification token and send email
         token_obj = EmailVerificationToken.objects.create(user=user)
         verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token_obj.token}"
-        _send_templated_email(
-            subject="Verify your NextStep AI account",
-            template_name="core/email_verification.html",
-            context={"user": user, "verification_url": verification_url},
-            recipient_email=user.email,
-        )
+        send_verification_email.delay(user.id, verification_url)
 
 
 class CurrentUserView(APIView):
@@ -218,17 +171,12 @@ class ResendVerificationView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "If that email is registered, a verification link has been sent."})
 
-        # Delete old token and create a new one
+        from .tasks import send_verification_email
         EmailVerificationToken.objects.filter(user=user).delete()
         token_obj = EmailVerificationToken.objects.create(user=user)
 
         verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token_obj.token}"
-        _send_templated_email(
-            subject="Verify your NextStep AI account",
-            template_name="core/email_verification.html",
-            context={"user": user, "verification_url": verification_url},
-            recipient_email=user.email,
-        )
+        send_verification_email.delay(user.id, verification_url)
 
         return Response({"detail": "If that email is registered, a verification link has been sent."})
 
@@ -250,17 +198,12 @@ class PasswordResetRequestView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "If that email is registered, a password reset link has been sent."})
 
-        # Delete old token and create a new one
+        from .tasks import send_password_reset_email
         PasswordResetToken.objects.filter(user=user).delete()
         token_obj = PasswordResetToken.objects.create(user=user)
 
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token_obj.token}"
-        _send_templated_email(
-            subject="Reset your NextStep AI password",
-            template_name="core/password_reset.html",
-            context={"user": user, "reset_url": reset_url},
-            recipient_email=user.email,
-        )
+        send_password_reset_email.delay(user.id, reset_url)
 
         return Response({"detail": "If that email is registered, a password reset link has been sent."})
 

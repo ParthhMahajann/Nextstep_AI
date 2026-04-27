@@ -26,7 +26,7 @@ app.conf.task_queues = (
 )
 app.conf.task_default_queue = 'api_queue'
 
-app.autodiscover_tasks(['scrapers'])
+app.autodiscover_tasks(['scrapers', 'core'])
 
 app.conf.beat_schedule = {
     # ── API sources (fast, generous limits) ──────────────────────────────────

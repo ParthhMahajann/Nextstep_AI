@@ -113,6 +113,10 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TIMEZONE = 'Asia/Kolkata'  # intentionally differs from TIME_ZONE=UTC; crontab schedules run in IST
 CELERY_TASK_TRACK_STARTED = True
+# In development (DEBUG=True) run tasks synchronously so emails work without a worker
+if DEBUG:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
 
 
 # ── Cache (Redis db 1 — separate from Celery's db 0) ─────────────────────────
