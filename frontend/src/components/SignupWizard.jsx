@@ -109,6 +109,14 @@ export function SignupWizard() {
     });
 
     const { register } = useAuthStore();
+
+    const formatAuthError = (err) => {
+        if (!err) return 'Registration failed. Please try again.';
+        if (typeof err === 'string') return err;
+        const messages = Object.values(err).flat();
+        return messages.join(' ') || 'Registration failed. Please try again.';
+    };
+
     const set_ = (field, value) => setForm(p => ({ ...p, [field]: value }));
     const toggle = (field, item) =>
         setForm(p => ({
@@ -156,7 +164,12 @@ export function SignupWizard() {
                 firstName: form.firstName, lastName: form.lastName,
                 email: form.email, password: form.password,
             });
-            if (!ok) { setIsLoading(false); return; }
+            if (!ok) {
+                const storeError = useAuthStore.getState().error;
+                setError(formatAuthError(storeError));
+                setIsLoading(false);
+                return;
+            }
 
             const profilePayload = {
                 age: form.age || null, phone: form.phone, bio: form.bio,

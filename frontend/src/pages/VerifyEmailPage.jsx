@@ -14,7 +14,10 @@ export function VerifyEmailPage() {
     const [status, setStatus] = useState('loading'); // loading | success | error
     const [message, setMessage] = useState('');
     const [resent, setResent] = useState(false);
+    const [manualEmail, setManualEmail] = useState('');
     const { verifyEmail, pendingVerificationEmail, resendVerification } = useAuthStore();
+
+    const emailToUse = pendingVerificationEmail || manualEmail;
 
     useEffect(() => {
         if (!token) {
@@ -34,8 +37,8 @@ export function VerifyEmailPage() {
     }, [token]);
 
     const handleResend = async () => {
-        if (!pendingVerificationEmail) return;
-        await resendVerification(pendingVerificationEmail);
+        if (!emailToUse) return;
+        await resendVerification(emailToUse);
         setResent(true);
     };
 
@@ -124,15 +127,36 @@ export function VerifyEmailPage() {
                                     {message}
                                 </p>
 
-                                {pendingVerificationEmail && !resent && (
-                                    <button onClick={handleResend} style={{
-                                        width: '100%', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                                        padding: '12px 20px', borderRadius: 14, cursor: 'pointer',
-                                        background: '#f3f3f3', border: '1px solid #e1e1e1',
-                                        color: 'var(--text-secondary)', fontWeight: 600, fontSize: 14,
-                                    }}>
-                                        <RefreshCw size={15} /> Resend verification email
-                                    </button>
+                                {!resent && (
+                                    <div style={{ marginBottom: 16 }}>
+                                        {!pendingVerificationEmail && (
+                                            <input
+                                                type="email"
+                                                placeholder="Enter your email to resend"
+                                                value={manualEmail}
+                                                onChange={e => setManualEmail(e.target.value)}
+                                                style={{
+                                                    width: '100%', marginBottom: 10,
+                                                    padding: '11px 14px', borderRadius: 10,
+                                                    border: '1px solid #e1e1e1', fontSize: 14,
+                                                    boxSizing: 'border-box', outline: 'none',
+                                                    background: '#fafafa', color: 'var(--text-primary)',
+                                                }}
+                                            />
+                                        )}
+                                        <button
+                                            onClick={handleResend}
+                                            disabled={!emailToUse}
+                                            style={{
+                                                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                                padding: '12px 20px', borderRadius: 14, cursor: emailToUse ? 'pointer' : 'not-allowed',
+                                                background: '#f3f3f3', border: '1px solid #e1e1e1',
+                                                color: 'var(--text-secondary)', fontWeight: 600, fontSize: 14,
+                                                opacity: emailToUse ? 1 : 0.5,
+                                            }}>
+                                            <RefreshCw size={15} /> Resend verification email
+                                        </button>
+                                    </div>
                                 )}
                                 {resent && (
                                     <p style={{ color: '#00a86b', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>

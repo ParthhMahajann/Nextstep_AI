@@ -24,7 +24,20 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'first_name': {'required': False},
             'last_name': {'required': False},
         }
-    
+
+    def validate_username(self, value):
+        existing = User.objects.filter(username=value).first()
+        if existing:
+            if not existing.is_active:
+                raise serializers.ValidationError(
+                    "This email is already registered but not yet verified. "
+                    "Please check your inbox or use the resend verification option on the login page."
+                )
+            raise serializers.ValidationError(
+                "This email is already registered. Please log in instead."
+            )
+        return value
+
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({"password": "Passwords do not match."})

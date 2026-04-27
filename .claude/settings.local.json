@@ -60,7 +60,8 @@
       "Bash(ls -d worktrees)",
       "Bash(grep -i \"worktree.*director\" CLAUDE.md)",
       "Bash(git push *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(npm test *)"
     ]
   }
 }
