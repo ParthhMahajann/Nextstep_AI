@@ -21,6 +21,7 @@ from .views import (
     PasswordResetConfirmView,
     SkillSuggestionsView,
     TasteProfileView,
+    HealthCheckView,
 )
 
 from .ai_views import (
@@ -67,6 +68,9 @@ urlpatterns = [
     path('ai/tailor-resume/', TailorResumeView.as_view(), name='tailor_resume'),
     path('ai/company-research/', CompanyResearchView.as_view(), name='company_research'),
     path('ai/chat/', AIChatView.as_view(), name='ai_chat'),
+
+    # Health check (no auth — for load balancers / uptime monitors)
+    path('health/', HealthCheckView.as_view(), name='health_check'),
 
     # Router URLs
     path('', include(router.urls)),

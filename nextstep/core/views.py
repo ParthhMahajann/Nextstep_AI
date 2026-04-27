@@ -720,3 +720,33 @@ class TasteProfileView(APIView):
             ],
             'top_skills': [s for s, _ in skill_counter.most_common(10)],
         })
+
+
+# ==================== Health Check ====================
+
+class HealthCheckView(APIView):
+    """Liveness probe for load balancers and uptime monitors. No auth required."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        checks = {'status': 'ok', 'db': 'ok', 'cache': 'ok'}
+        http_status = status.HTTP_200_OK
+
+        try:
+            from django.db import connection
+            connection.ensure_connection()
+        except Exception:
+            checks['db'] = 'error'
+            checks['status'] = 'degraded'
+            http_status = status.HTTP_503_SERVICE_UNAVAILABLE
+
+        try:
+            from django.core.cache import cache
+            cache.set('health_check', '1', timeout=5)
+        except Exception:
+            checks['cache'] = 'error'
+            checks['status'] = 'degraded'
+            http_status = status.HTTP_503_SERVICE_UNAVAILABLE
+
+        return Response(checks, status=http_status)
