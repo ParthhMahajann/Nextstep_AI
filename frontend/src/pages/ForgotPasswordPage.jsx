@@ -20,15 +20,12 @@ export function ForgotPasswordPage() {
     };
 
     return (
-        <div style={{
-            minHeight: '100dvh',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 24, position: 'relative', zIndex: 1,
-        }}>
+        <div className="auth-page">
             <motion.div
                 initial={{ opacity: 0, y: 24, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                className="auth-card"
                 style={{ width: '100%', maxWidth: 420 }}
             >
                 {/* Logo */}
@@ -74,6 +71,7 @@ export function ForgotPasswordPage() {
                                             placeholder="Your email address"
                                             value={email}
                                             onChange={e => setEmail(e.target.value)}
+                                            autoComplete="email"
                                             required
                                         />
                                     </div>

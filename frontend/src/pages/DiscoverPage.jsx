@@ -144,14 +144,16 @@ export function DiscoverPage() {
                                         </div>
                                     )}
                                     <button onClick={() => setShowSearch(true)}
-                                        style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                                        <Search size={15} />
+                                        aria-label="Search jobs"
+                                        style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                                        <Search size={18} />
                                     </button>
                                     <button
                                         onClick={() => { setLocalFilters(filters); setShowFilters(true); }}
-                                        style={{ width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: activeFilterCount > 0 ? 'rgba(230,0,35,0.08)' : 'var(--bg-elevated)', border: activeFilterCount > 0 ? '1px solid rgba(230,0,35,0.25)' : '1px solid var(--border)', color: activeFilterCount > 0 ? '#e60023' : 'var(--text-muted)' }}
+                                        aria-label="Filter jobs"
+                                        style={{ width: 44, height: 44, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: activeFilterCount > 0 ? 'rgba(230,0,35,0.08)' : 'var(--bg-elevated)', border: activeFilterCount > 0 ? '1px solid rgba(230,0,35,0.25)' : '1px solid var(--border)', color: activeFilterCount > 0 ? '#e60023' : 'var(--text-muted)' }}
                                     >
-                                        <SlidersHorizontal size={15} />
+                                        <SlidersHorizontal size={18} />
                                         {activeFilterCount > 0 && (
                                             <span style={{ position: 'absolute', top: -3, right: -3, width: 16, height: 16, borderRadius: '50%', background: '#e60023', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#fff' }}>
                                                 {activeFilterCount}
@@ -159,8 +161,9 @@ export function DiscoverPage() {
                                         )}
                                     </button>
                                     <button onClick={fetchRecommended}
-                                        style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                                        <RefreshCw size={15} />
+                                        aria-label="Refresh feed"
+                                        style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                                        <RefreshCw size={18} />
                                     </button>
                                 </div>
                             </motion.div>
@@ -182,10 +185,10 @@ export function DiscoverPage() {
                     </div>
                 )}
                 {isLoading ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 500, gap: 24 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'min(500px, calc(100dvh - 260px))', gap: 24 }}>
                         <div style={{ position: 'relative' }}>
                             {[0.88, 0.94, 1].map((scale, i) => (
-                                <div key={i} style={{ position: i < 2 ? 'absolute' : 'relative', top: i < 2 ? `${(2 - i) * 10}px` : 0, left: 0, right: 0, transform: `scale(${scale})`, transformOrigin: 'bottom center', width: '100%', height: 480, borderRadius: 24, background: '#ffffff', border: '1px solid #e1e1e1', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', zIndex: i + 1 }}>
+                                <div key={i} style={{ position: i < 2 ? 'absolute' : 'relative', top: i < 2 ? `${(2 - i) * 10}px` : 0, left: 0, right: 0, transform: `scale(${scale})`, transformOrigin: 'bottom center', width: '100%', height: 'min(480px, calc(100dvh - 280px))', borderRadius: 24, background: '#ffffff', border: '1px solid #e1e1e1', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', zIndex: i + 1 }}>
                                     {i === 2 && (
                                         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
                                             <div className="skeleton" style={{ height: 20, width: '60%' }} />
@@ -252,10 +255,16 @@ export function DiscoverPage() {
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
                             style={{ marginTop: 16, textAlign: 'center' }}
                         >
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 20, fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
-                                <span>← skip</span>
-                                <span style={{ color: '#e60023', fontWeight: 600 }}>↑ save</span>
-                                <span style={{ color: '#e60023', fontWeight: 600 }}>→ apply · tap for details</span>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <span aria-label="Swipe left to skip" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 99, background: '#f3f3f3', border: '1px solid #e1e1e1', fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+                                    <span aria-hidden="true">←</span> Skip
+                                </span>
+                                <span aria-label="Swipe up to save" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 99, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', fontSize: 11, color: '#d97706', fontWeight: 600 }}>
+                                    <span aria-hidden="true">↑</span> Save
+                                </span>
+                                <span aria-label="Swipe right to apply, tap for details" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 99, background: 'rgba(230,0,35,0.08)', border: '1px solid rgba(230,0,35,0.2)', fontSize: 11, color: '#e60023', fontWeight: 600 }}>
+                                    <span aria-hidden="true">→</span> Apply · tap for details
+                                </span>
                             </div>
                         </motion.div>
                     </div>

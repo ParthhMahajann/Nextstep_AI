@@ -186,11 +186,8 @@ export function SignupWizard() {
     const progress = ((step - 1) / (STEPS.length - 1)) * 100;
 
     return (
-        <div style={{
-            minHeight: '100dvh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-            padding: '20px 16px 40px', position: 'relative', zIndex: 1,
-        }}>
-            <div style={{ width: '100%', maxWidth: 600 }}>
+        <div className="auth-page">
+            <div className="auth-card" style={{ width: '100%', maxWidth: 600 }}>
                 {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: 24 }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>

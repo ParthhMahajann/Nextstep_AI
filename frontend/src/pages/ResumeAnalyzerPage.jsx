@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { aiAPI, savedJobsAPI, resumeVersionsAPI } from '../api/client';
 import { useToast } from '../components/Toast';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // ─── Resume Versions Section ─────────────────────────────────────────────────
 
@@ -296,6 +297,7 @@ function TailorResumePanel({ savedJobs }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function ResumeAnalyzerPage() {
+    const isMobile = useIsMobile();
     const [inputMode, setInputMode] = useState('upload');
     const [resumeText, setResumeText] = useState('');
     const [resumeFile, setResumeFile] = useState(null);
@@ -469,22 +471,26 @@ export function ResumeAnalyzerPage() {
                                             onDragLeave={e => { e.preventDefault(); setIsDragging(false); }}
                                             onDrop={handleDrop}
                                             onClick={() => fileInputRef.current?.click()}
+                                            onMouseOver={e => { if (!isMobile) e.currentTarget.style.borderColor = '#e60023'; }}
+                                            onMouseOut={e => { if (!isMobile) e.currentTarget.style.borderColor = isDragging ? '#e60023' : '#d0d0d0'; }}
                                             style={{
-                                                marginBottom: 16, borderRadius: 14, padding: '36px 24px', textAlign: 'center',
+                                                marginBottom: 16, borderRadius: 14, padding: isMobile ? '32px 20px' : '40px 20px', textAlign: 'center',
                                                 cursor: 'pointer', transition: 'all 0.2s',
                                                 border: `1.5px dashed ${isDragging ? '#e60023' : '#d0d0d0'}`,
                                                 background: isDragging ? 'rgba(230,0,35,0.04)' : '#fafafa',
                                             }}
                                         >
-                                            <input ref={fileInputRef} type="file" accept=".pdf,.docx" onChange={e => handleFileSelect(e.target.files[0])} style={{ display: 'none' }} />
+                                            <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" onChange={e => handleFileSelect(e.target.files[0])} style={{ display: 'none' }} />
                                             <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(230,0,35,0.08)', border: '1px solid rgba(230,0,35,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-                                                <Upload size={24} color="#e60023" />
+                                                <Upload size={isMobile ? 32 : 40} color="#e60023" />
                                             </div>
                                             <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-                                                {isDragging ? 'Drop your resume here' : 'Drag & drop your resume'}
+                                                {isMobile ? 'Tap to upload resume' : 'Drop your resume here'}
                                             </p>
-                                            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 4 }}>or click to browse files</p>
-                                            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>PDF or DOCX · Max 10MB</p>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 4 }}>
+                                                {isMobile ? 'PDF, DOC, or DOCX' : 'or click to browse — PDF, DOC, DOCX'}
+                                            </p>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Max 10MB</p>
                                         </motion.div>
                                     ) : (
                                         <motion.div

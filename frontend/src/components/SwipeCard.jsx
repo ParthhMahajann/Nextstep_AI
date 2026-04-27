@@ -302,7 +302,7 @@ export function CardStack({ jobs, currentIndex, onSwipe, onCardTap, onRefresh })
     }
 
     return (
-        <div style={{ position: 'relative', height: 500 }}>
+        <div style={{ position: 'relative', height: 'min(500px, calc(100dvh - 260px))' }}>
             <AnimatePresence>
                 {visible.map((job, i) => (
                     <SwipeCard

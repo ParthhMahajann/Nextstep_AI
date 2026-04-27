@@ -5,11 +5,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Building2, MapPin, ExternalLink, Briefcase, Sparkles,
+    X, ArrowLeft, Building2, MapPin, ExternalLink, Briefcase, Sparkles,
     CheckCircle2, XCircle, ChevronDown, ChevronUp, BrainCircuit, Search, Layers
 } from 'lucide-react';
 import { jobsAPI, aiAPI } from '../api/client';
 import { InterviewPrepModal } from './InterviewPrepModal';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const JOB_TYPE_LABELS = {
     job: 'Job',
@@ -285,6 +286,7 @@ function SimilarJobsSection({ jobId }) {
 }
 
 export function JobDetailSheet({ job, onClose, onApply, onSave }) {
+    const isMobile = useIsMobile();
     const [showInterviewPrep, setShowInterviewPrep] = useState(false);
     const [descExpanded, setDescExpanded] = useState(false);
     const desc = job.description || job.ai_summary || '';
@@ -294,11 +296,13 @@ export function JobDetailSheet({ job, onClose, onApply, onSave }) {
     return (
         <>
             {/* Backdrop */}
-            <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={onClose}
-                style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
-            />
+            {!isMobile && (
+                <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    onClick={onClose}
+                    style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+                />
+            )}
 
             {/* Sheet */}
             <motion.div
@@ -306,7 +310,11 @@ export function JobDetailSheet({ job, onClose, onApply, onSave }) {
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 310 }}
-                style={{
+                style={isMobile ? {
+                    position: 'fixed', inset: 0, zIndex: 301,
+                    background: '#ffffff',
+                    display: 'flex', flexDirection: 'column',
+                } : {
                     position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
                     background: '#ffffff',
                     border: '1px solid #e1e1e1', borderBottom: 'none',
@@ -315,11 +323,41 @@ export function JobDetailSheet({ job, onClose, onApply, onSave }) {
                     boxShadow: '0 -4px 32px rgba(0,0,0,0.12)',
                 }}
             >
-                {/* Handle */}
-                <div style={{ width: 36, height: 4, borderRadius: 99, background: '#e1e1e1', margin: '10px auto 0' }} />
+                {/* Handle — desktop only */}
+                {!isMobile && (
+                    <div style={{ width: 36, height: 4, borderRadius: 99, background: '#e1e1e1', margin: '10px auto 0' }} />
+                )}
+
+                {/* Mobile top bar — back button + job title */}
+                {isMobile && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 16px',
+                        paddingTop: 'max(12px, env(safe-area-inset-top))',
+                        borderBottom: '1px solid #f0f0f0',
+                        flexShrink: 0,
+                    }}>
+                        <button
+                            onClick={onClose}
+                            aria-label="Go back"
+                            style={{
+                                width: 44, height: 44, borderRadius: 12,
+                                background: '#f3f3f3', border: '1px solid #e1e1e1',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0,
+                            }}
+                        >
+                            <ArrowLeft size={18} />
+                        </button>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-primary)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{job.title}</p>
+                            <p style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{job.company}{job.location ? ` · ${job.location}` : ''}</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Scrollable body */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 32px' }}>
+                <div className="modal-scroll" style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 32px' }}>
                     {/* Header row */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
                         <div style={{ width: 52, height: 52, borderRadius: 14, flexShrink: 0, background: 'rgba(230,0,35,0.08)', border: '1px solid rgba(230,0,35,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#e60023' }}>
@@ -332,9 +370,11 @@ export function JobDetailSheet({ job, onClose, onApply, onSave }) {
                                 {job.location && <><MapPin size={12} style={{ marginLeft: 4 }} /> {job.location}</>}
                             </p>
                         </div>
-                        <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: 10, background: '#f3f3f3', border: '1px solid #e1e1e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}>
-                            <X size={16} />
-                        </button>
+                        {!isMobile && (
+                            <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: 10, background: '#f3f3f3', border: '1px solid #e1e1e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}>
+                                <X size={16} />
+                            </button>
+                        )}
                     </div>
 
                     {/* Chips */}
@@ -406,7 +446,13 @@ export function JobDetailSheet({ job, onClose, onApply, onSave }) {
                 </div>
 
                 {/* Footer CTA */}
-                <div style={{ padding: '12px 20px 36px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: 10, background: '#ffffff' }}>
+                <div style={{
+                    padding: '12px 20px',
+                    paddingBottom: 'max(36px, calc(12px + env(safe-area-inset-bottom)))',
+                    borderTop: '1px solid #f0f0f0',
+                    display: 'flex', gap: 10, background: '#ffffff',
+                    flexShrink: 0,
+                }}>
                     <button onClick={onSave} style={{ flex: 1, padding: '13px', borderRadius: 14, border: '1px solid #e1e1e1', background: '#f3f3f3', color: 'var(--text-secondary)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
                         Save
                     </button>

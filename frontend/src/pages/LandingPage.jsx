@@ -159,16 +159,16 @@ export function LandingPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <Link to="/login" style={{
-                        padding: '8px 18px', borderRadius: 999, fontSize: 13, fontWeight: 700,
+                        padding: '11px 16px', borderRadius: 999, fontSize: 13, fontWeight: 700,
                         color: '#111', textDecoration: 'none', border: '1.5px solid #e1e1e1',
-                        background: '#fff',
+                        background: '#fff', whiteSpace: 'nowrap',
                     }}>
                         Sign in
                     </Link>
                     <Link to="/signup" style={{
-                        padding: '8px 18px', borderRadius: 999, fontSize: 13, fontWeight: 700,
+                        padding: '11px 16px', borderRadius: 999, fontSize: 13, fontWeight: 700,
                         color: '#fff', textDecoration: 'none', background: '#e60023',
-                        boxShadow: '0 2px 8px rgba(230,0,35,0.3)',
+                        boxShadow: '0 2px 8px rgba(230,0,35,0.3)', whiteSpace: 'nowrap',
                     }}>
                         Get started
                     </Link>
@@ -176,7 +176,7 @@ export function LandingPage() {
             </header>
 
             {/* ── Hero ── */}
-            <section style={{ padding: '80px 24px 60px', textAlign: 'center', maxWidth: 800, margin: '0 auto' }}>
+            <section style={{ padding: 'clamp(40px, 8vw, 80px) 24px 60px', textAlign: 'center', maxWidth: 800, margin: '0 auto' }}>
                 <FadeUp>
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -192,7 +192,7 @@ export function LandingPage() {
 
                 <FadeUp delay={0.05}>
                     <h1 style={{
-                        fontSize: 'clamp(40px, 7vw, 72px)',
+                        fontSize: 'clamp(28px, 7vw, 56px)',
                         fontWeight: 900,
                         letterSpacing: '-0.04em',
                         lineHeight: 1.05,
@@ -237,15 +237,13 @@ export function LandingPage() {
 
                 {/* Stats row */}
                 <FadeUp delay={0.2}>
-                    <div style={{
-                        display: 'flex', gap: 0, justifyContent: 'center',
-                        marginTop: 56, flexWrap: 'wrap',
+                    <div className="landing-stats-grid" style={{
+                        marginTop: 56,
                         borderTop: '1px solid #f0f0f0', paddingTop: 36,
                     }}>
-                        {STATS.map(({ value, label }, i) => (
+                        {STATS.map(({ value, label }) => (
                             <div key={label} style={{
-                                flex: '1 1 120px', textAlign: 'center', padding: '0 24px',
-                                borderRight: i < STATS.length - 1 ? '1px solid #f0f0f0' : 'none',
+                                textAlign: 'center', padding: '0 24px',
                             }}>
                                 <p style={{ fontSize: 30, fontWeight: 900, color: '#e60023', letterSpacing: '-0.03em' }}>{value}</p>
                                 <p style={{ fontSize: 12, color: '#767676', marginTop: 4, fontWeight: 600 }}>{label}</p>
@@ -265,7 +263,7 @@ export function LandingPage() {
                         </div>
                     </FadeUp>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                    <div className="landing-sources-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                         {SOURCES.map(({ name, icon: Icon, color, bg, desc, count }, i) => (
                             <FadeUp key={name} delay={i * 0.07}>
                                 <div style={{
@@ -333,7 +331,7 @@ export function LandingPage() {
                         </div>
                     </FadeUp>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
+                    <div className="landing-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
                         {FEATURES.map(({ icon: Icon, color, bg, title, desc }, i) => (
                             <FadeUp key={title} delay={i * 0.06}>
                                 <div style={{
@@ -367,7 +365,7 @@ export function LandingPage() {
                         </div>
                     </FadeUp>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(12px, 3vw, 24px)' }}>
                         {HOW_IT_WORKS.map(({ step, title, desc }, i) => (
                             <FadeUp key={step} delay={i * 0.08}>
                                 <div style={{

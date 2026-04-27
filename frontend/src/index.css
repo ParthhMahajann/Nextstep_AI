@@ -130,11 +130,6 @@ body {
   transition: box-shadow var(--t-base), border-color var(--t-base);
 }
 
-.glass-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-hover);
-}
-
 /* ═══════════════════════════════════════════════════════════
    BUTTONS
    ═══════════════════════════════════════════════════════════ */
@@ -163,12 +158,6 @@ body {
   background: var(--primary);
   color: #fff;
   box-shadow: 0 2px 8px rgba(230,0,35,0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(230,0,35,0.35);
 }
 
 .btn-primary:active:not(:disabled) { transform: translateY(0); }
@@ -317,8 +306,7 @@ textarea.input { resize: vertical; min-height: 100px; }
   box-shadow: var(--shadow-sm);
 }
 
-.swipe-btn:hover:not(:disabled) { transform: scale(1.1); box-shadow: var(--shadow-md); }
-.swipe-btn:active:not(:disabled) { transform: scale(0.95); }
+.swipe-btn:active:not(:disabled) { transform: scale(0.93); }
 .swipe-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .swipe-btn-skip {
@@ -522,7 +510,9 @@ textarea.input { resize: vertical; min-height: 100px; }
 .page { min-height: 100dvh; padding-bottom: 0; }
 
 @media (max-width: 767px) {
-  .page { padding-bottom: 80px; }
+  .page { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  /* Push sticky headers below the iPhone notch in PWA/standalone mode */
+  header { padding-top: max(16px, calc(12px + env(safe-area-inset-top))) !important; }
 }
 
 @media (min-width: 768px) {
@@ -808,4 +798,140 @@ textarea.input { resize: vertical; min-height: 100px; }
     box-shadow: -4px 0 32px rgba(0,0,0,0.1);
     padding: 24px 24px 40px;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE-FIRST GLOBAL FIXES
+   ═══════════════════════════════════════════════════════════ */
+
+/* Safe area insets — iPhone notch / home indicator */
+.bottom-nav {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+/* Prevent iOS auto-zoom on input focus (requires font-size >= 16px) */
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Guard hover transforms — touch devices don't have hover,
+   so transform: translateY(-1px) would stick after tap */
+@media (hover: hover) {
+  .btn-primary:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(230,0,35,0.35);
+  }
+  .glass-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-hover);
+  }
+  .swipe-btn:hover:not(:disabled) {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+/* Active (press) feedback for touch */
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.nav-item:active {
+  opacity: 0.7;
+}
+
+/* Prevent pull-to-refresh from firing inside scrollable modals */
+.modal-scroll {
+  overscroll-behavior-y: contain;
+}
+
+/* Touch target helpers — bump icon buttons to 44px on mobile */
+@media (max-width: 767px) {
+  .btn-icon {
+    width: 44px !important;
+    height: 44px !important;
+  }
+}
+
+/* Auth pages — full-screen on mobile */
+.auth-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 767px) {
+  .auth-page {
+    align-items: flex-start;
+    padding: 48px 24px 40px;
+  }
+  .auth-card {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
+/* Landing page responsive grid utilities */
+.landing-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.landing-sources-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.landing-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.landing-job-types-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+@media (max-width: 767px) {
+  .landing-features-grid {
+    grid-template-columns: 1fr;
+  }
+  .landing-sources-grid {
+    grid-template-columns: 1fr;
+  }
+  .landing-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Profile form — stack label above input on mobile */
+.profile-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+@media (max-width: 767px) {
+  .profile-field-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+  .profile-field-row label,
+  .profile-field-row p {
+    min-width: unset !important;
+    width: 100% !important;
+  }
+}
+
+/* Kanban mobile scroll — hide WebKit scrollbar */
+.kanban-mobile-scroll::-webkit-scrollbar {
+    display: none;
 }

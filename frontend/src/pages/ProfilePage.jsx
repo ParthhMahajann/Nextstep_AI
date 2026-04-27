@@ -10,8 +10,9 @@ import {
     User, Mail, Phone, Briefcase, GraduationCap,
     Link as LinkIcon, Edit2, Check, X, FileText,
     Github, Linkedin, Globe, Zap, LogOut, MapPin,
-    ChevronRight, Plus, Trash2, Search
+    ChevronRight, Plus, Trash2, Search, Settings
 } from 'lucide-react';
+import { NotificationCenter } from '../components/NotificationCenter';
 import { useAuthStore } from '../store/authStore';
 import { skillsAPI, profileAPI } from '../api/client';
 import { useToast } from '../components/Toast';
@@ -172,7 +173,7 @@ function SkillsPanel({ profile, onRefresh }) {
                                 onChange={e => setQuery(e.target.value)}
                                 placeholder="Search skills to add…"
                                 autoFocus
-                                style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, padding: '10px 0' }}
+                                style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, padding: '10px 0', width: '100%', minWidth: 0 }}
                             />
                         </div>
                         {filtered.length > 0 && (
@@ -300,6 +301,7 @@ export function ProfilePage() {
                                 </button>
                             </div>
                         )}
+                        <NotificationCenter />
                         <button onClick={logout} style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#f87171' }}>
                             <LogOut size={15} />
                         </button>
@@ -342,15 +344,15 @@ export function ProfilePage() {
 
                     {/* Phone & Exp Level row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        <div>
+                        <div className="profile-field-row">
                             <Label>Phone</Label>
                             {editing ? (
-                                <input className="input" placeholder="Phone number" value={form.phone} style={{ fontSize: 14 }} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
+                                <input className="input" placeholder="Phone number" value={form.phone} style={{ fontSize: 14, width: '100%', minWidth: 0 }} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
                             ) : (
                                 <p style={{ color: profile?.phone ? 'var(--text-secondary)' : 'var(--text-muted)', fontSize: 14 }}>{profile?.phone || '—'}</p>
                             )}
                         </div>
-                        <div>
+                        <div className="profile-field-row">
                             <Label>Experience Level</Label>
                             {editing ? (
                                 <select className="input" style={{ cursor: 'pointer', fontSize: 14 }} value={form.experience_level} onChange={e => setForm(p => ({ ...p, experience_level: e.target.value }))}>

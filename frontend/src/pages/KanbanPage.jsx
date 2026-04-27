@@ -2,7 +2,7 @@
  * Kanban Application Tracker — drag cards between pipeline stages
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutGrid, Bookmark, ClipboardList, Send, MessageSquare,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { savedJobsAPI } from '../api/client';
 import { useToast } from '../components/Toast';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const COLUMNS = [
     { key: 'saved',        label: 'Saved',        icon: Bookmark,       color: '#1877f2', bg: 'rgba(24,119,242,0.06)',  border: 'rgba(24,119,242,0.18)' },
@@ -64,7 +65,7 @@ function KanbanCard({ item, onMove, selected, onSelect }) {
             {/* Select checkbox */}
             <button
                 onClick={e => { e.stopPropagation(); onSelect(item.id); }}
-                style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: selected ? '#e60023' : '#c4c4c4' }}
+                style={{ position: 'absolute', top: 8, right: 8, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8, color: selected ? '#e60023' : '#c4c4c4' }}
             >
                 {selected ? <CheckSquare size={14} /> : <Square size={14} />}
             </button>
@@ -151,6 +152,9 @@ function KanbanCard({ item, onMove, selected, onSelect }) {
 }
 
 export function KanbanPage() {
+    const isMobile = useIsMobile();
+    const scrollRef = useRef(null);
+    const [activeColIndex, setActiveColIndex] = useState(0);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selected, setSelected] = useState(new Set());
@@ -184,6 +188,21 @@ export function KanbanPage() {
     };
 
     useEffect(() => { load(); }, []);
+
+    useEffect(() => {
+        if (!isMobile) {
+            setActiveColIndex(0);
+            return;
+        }
+        const el = scrollRef.current;
+        if (!el) return;
+        const onScroll = () => {
+            const COLUMN_STRIDE = 260 + 12; // minWidth + gap
+            setActiveColIndex(Math.round(el.scrollLeft / COLUMN_STRIDE));
+        };
+        el.addEventListener('scroll', onScroll, { passive: true });
+        return () => el.removeEventListener('scroll', onScroll);
+    }, [isMobile]);
 
     const moveCard = async (id, newStatus) => {
         try {
@@ -243,17 +262,39 @@ export function KanbanPage() {
             </header>
 
             {/* Kanban board — horizontal scroll */}
-            <div style={{
-                display: 'flex', gap: 14, overflowX: 'auto', padding: '20px 20px 24px',
-                scrollbarWidth: 'thin', scrollbarColor: '#d4d4d4 transparent',
-                minHeight: 'calc(100vh - 65px)',
-                alignItems: 'flex-start',
-            }}>
+            <div
+                ref={isMobile ? scrollRef : undefined}
+                className={isMobile ? 'kanban-mobile-scroll' : undefined}
+                style={isMobile ? {
+                    display: 'flex',
+                    gap: 12,
+                    overflowX: 'auto',
+                    scrollSnapType: 'x mandatory',
+                    WebkitOverflowScrolling: 'touch',
+                    paddingTop: 16,
+                    paddingBottom: 8,
+                    paddingLeft: 16,
+                    paddingRight: 16,
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                } : {
+                    display: 'flex', gap: 14, overflowX: 'auto', padding: '20px 20px 24px',
+                    scrollbarWidth: 'thin', scrollbarColor: '#d4d4d4 transparent',
+                    minHeight: 'calc(100vh - 65px)',
+                    alignItems: 'flex-start',
+                }}
+            >
                 {COLUMNS.map(col => {
                     const colItems = items.filter(i => i.status === col.key);
                     const Icon = col.icon;
                     return (
-                        <div key={col.key} style={{ flexShrink: 0, width: 260, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div key={col.key} style={{
+                            flexShrink: 0,
+                            width: isMobile ? undefined : 260,
+                            minWidth: isMobile ? 260 : undefined,
+                            scrollSnapAlign: isMobile ? 'start' : undefined,
+                            display: 'flex', flexDirection: 'column', gap: 10,
+                        }}>
                             {/* Column header */}
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: 8,
@@ -293,6 +334,22 @@ export function KanbanPage() {
                     );
                 })}
             </div>
+            {isMobile && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingTop: 12 }}>
+                    {COLUMNS.map((col, i) => (
+                        <div
+                            key={col.key}
+                            style={{
+                                width: i === activeColIndex ? 20 : 6,
+                                height: 6,
+                                borderRadius: 99,
+                                background: i === activeColIndex ? col.color : '#e1e1e1',
+                                transition: 'all 0.25s ease',
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

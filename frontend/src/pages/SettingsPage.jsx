@@ -33,6 +33,7 @@ function SettingRow({ label, sub, onClick, danger, rightElement }) {
                 justifyContent: 'space-between',
                 borderBottom: '1px solid #f0f0f0',
                 textAlign: 'left',
+                minHeight: 52,
             }}
         >
             <div>

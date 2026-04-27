@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ScanText, LayoutGrid, BarChart3, Zap, ArrowRight, Check } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const STEPS = [
     {
@@ -46,6 +47,7 @@ const STEPS = [
 ];
 
 export function OnboardingModal({ onDone }) {
+    const isMobile = useIsMobile();
     const [step, setStep] = useState(0);
     const current = STEPS[step];
     const isLast = step === STEPS.length - 1;
@@ -57,26 +59,36 @@ export function OnboardingModal({ onDone }) {
 
     return (
         <>
-            {/* Backdrop */}
-            <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 500 }}
-            />
+            {/* Backdrop — desktop only */}
+            {!isMobile && (
+                <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 500 }}
+                />
+            )}
 
             {/* Modal */}
             <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+                initial={isMobile ? { opacity: 0, y: 30 } : { opacity: 0, scale: 0.9, y: 20 }}
+                animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+                exit={isMobile ? { opacity: 0, y: 30 } : { opacity: 0, scale: 0.9 }}
                 transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-                style={{
+                style={isMobile ? {
+                    position: 'fixed', inset: 0, zIndex: 501,
+                    background: '#ffffff',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                    padding: '32px 24px',
+                    pointerEvents: 'all',
+                } : {
                     position: 'fixed', inset: 0, zIndex: 501,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '20px 16px',
                     pointerEvents: 'none',
                 }}
             >
-                <div style={{
+                <div style={isMobile ? {
+                    width: '100%',
+                } : {
                     width: '100%', maxWidth: 380,
                     background: '#ffffff',
                     border: '1px solid #e1e1e1',
