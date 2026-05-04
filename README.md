@@ -1,488 +1,522 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/NextStep-AI-e60023?style=for-the-badge&logo=zap&logoColor=white" alt="NextStep AI" />
-</p>
+# NextStep AI
 
-<h1 align="center">NextStep AI — Intelligent Career Discovery Platform</h1>
+**An AI-Powered Job Discovery and Career Intelligence Platform**
 
-<p align="center">
-  <em>An AI-powered job discovery, resume analysis, and application tracking system built with Django, React, and Machine Learning.</em>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/Django-5.x-092E20?style=flat-square&logo=django&logoColor=white" />
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" />
-  <img src="https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite&logoColor=white" />
-  <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white" />
-  <img src="https://img.shields.io/badge/Groq_LLM-Llama_3-orange?style=flat-square" />
-  <img src="https://img.shields.io/badge/License-Academic-blue?style=flat-square" />
-</p>
+NextStep AI aggregates job listings from eight sources, ranks them with a multi-signal ML engine, and presents them through a Tinder-style swipe interface -- paired with a full suite of Groq-powered AI career tools.
 
 ---
 
-## 📋 Project Information
+## Table of Contents
 
-| Field | Details |
-|---|---|
-| **Project Title** | NextStep AI — Intelligent Career Discovery Platform |
-| **Author** | Parth Mahajan |
-| **Guide** | Mr. Neeraj Sharma |
-| **Domain** | Artificial Intelligence, Machine Learning, Full-Stack Web Development |
-| **Academic Year** | 2025–2026 |
-
----
-
-## 📖 Abstract
-
-**NextStep AI** is an end-to-end, AI-driven career discovery platform that aggregates job listings from **9+ live data sources**, ranks them using **machine learning models** (TF-IDF and Sentence Transformers), and provides intelligent career tools such as **AI-powered resume analysis**, **automated cover letter generation**, **interview preparation**, and a **Kanban-style application tracker**. The platform features a Tinder-style swipe interface for job discovery and learns from user behaviour through an implicit feedback loop to continuously improve recommendation quality.
-
----
-
-## 🎯 Objectives
-
-1. **Automate Job Aggregation** — Scrape and normalise job postings from multiple heterogeneous sources into a unified database.
-2. **Intelligent Matching** — Apply NLP-based semantic similarity and skill-gap analysis to rank jobs by relevance to each user's profile.
-3. **AI Career Assistance** — Leverage Large Language Models (Groq/Llama 3) to generate cold emails, cover letters, resume analyses, and interview preparation material.
-4. **User Behaviour Learning** — Implement an implicit feedback loop (swipe events, saved jobs) to compute personalised taste vectors and adaptive ranking.
-5. **End-to-End Application Tracking** — Provide a Kanban board and analytics dashboard for managing the entire job-search lifecycle.
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [API Reference](#api-reference)
+- [ML Ranking Engine](#ml-ranking-engine)
+- [AI Engine](#ai-engine)
+- [Job Scrapers](#job-scrapers)
+- [Project Structure](#project-structure)
+- [Running Tests](#running-tests)
+- [Production Deployment](#production-deployment)
 
 ---
 
-## 🏗️ System Architecture
+## Features
+
+### Job Discovery
+- **Tinder-style swipe interface** -- Skip (left), Save (up), Apply (right)
+- **AI-personalised recommendations** via multi-signal ML ranking
+- **Real-time search** by title, company, location on the live feed
+- **Advanced filters** -- job type, source platform, location
+- **Job detail sheet** -- full description, skills, match score, AI summary
+- **Similar jobs** -- embedding-based cosine similarity search
+
+### Application Management
+- **Kanban tracker** -- six-stage pipeline: Saved, Preparing, Applied, Interviewing, Rejected, Accepted
+- **Bulk actions** -- select multiple cards, move to any stage at once
+- **CSV export** -- download full application history as a spreadsheet
+- **Interview scheduling** -- attach interview date and follow-up reminders to any application
+
+### Analytics
+- Pipeline funnel with per-stage counts and horizontal bar chart
+- Response rate and offer rate metrics
+- Top skills appearing across saved jobs
+
+### AI Career Tools (Groq / LLaMA)
+
+| Tool | Model | Description |
+|------|-------|-------------|
+| Cold Email Drafting | LLaMA 3.1 8B | Personalised outreach email for any job |
+| Cover Letter | LLaMA 3.1 8B | Professional cover letter tailored to the role |
+| Resume Analysis | LLaMA 3.3 70B | ATS score, strengths, improvements, keyword gap |
+| Resume Tailoring | LLaMA 3.3 70B | Full resume rewrite optimised for a target job |
+| Interview Prep | LLaMA 3.3 70B | 8 Q&A pairs (technical, behavioural, company-specific) |
+| Company Research | LLaMA 3.1 8B | Culture, tech stack, interview format, red flags |
+| Application Tips | LLaMA 3.1 8B | 5 specific tips for the target role |
+| AI Chat Assistant | LLaMA 3.1 8B | Conversational career coach aware of your profile |
+
+### Auth and Profile
+- Email + password registration with **JWT authentication** (access: 1 hr, refresh: 7 d)
+- **Email verification** via 24-hour single-use UUID token (sent async via Celery)
+- **Password reset** via email (1-hour token, single-use)
+- Profile: bio, skills with proficiency ratings, education, qualifications, resume upload (PDF/DOCX), LinkedIn/GitHub/portfolio links
+- **Multi-version resume management** with named versions and target role metadata
+- **Skill suggestions** derived automatically from your saved jobs
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Django 5.x + Django REST Framework 3.14 |
+| Auth | djangorestframework-simplejwt (JWT) |
+| Database | PostgreSQL 16 |
+| Cache / Queue | Redis 7 |
+| Async Tasks | Celery 5.3 |
+| AI | Groq API (LLaMA 3.1 8B, LLaMA 3.3 70B, Gemma2 9B) |
+| ML / NLP | scikit-learn, sentence-transformers (all-MiniLM-L6-v2), numpy |
+| Scraping | requests, BeautifulSoup4, lxml |
+| Scheduler | APScheduler 3.10 |
+| WSGI | Gunicorn 21 |
+| Static Files | WhiteNoise 6.6 |
+| Frontend | React 18 + Vite 5 |
+| State | Zustand |
+| Animations | Framer Motion |
+| Icons | Lucide React |
+| Containers | Docker + Docker Compose |
+
+---
+
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        FRONTEND (React 19 + Vite 7)                │
-│  Landing │ Discover │ Resume Analyzer │ Kanban │ Analytics │ Chat  │
-│  Zustand State  │  React Query  │  Framer Motion  │  Tailwind CSS  │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │ REST API (JWT Auth)
-┌──────────────────────────────▼──────────────────────────────────────┐
-│                   BACKEND (Django 5 + DRF)                         │
-│  Auth │ Profile │ Jobs │ Saved Jobs │ Resume Versions │ AI Views   │
-│  Matching Service  │  Celery Tasks  │  Email Service               │
-└────┬────────────────────┬────────────────────────┬─────────────────┘
-     │                    │                        │
-┌────▼──────┐    ┌────────▼────────┐     ┌─────────▼─────────┐
-│ SCRAPERS  │    │   ML ENGINE     │     │    AI ENGINE       │
-│ 9 Sources │    │ Skill Matcher   │     │ Groq LLM Service   │
-│ Scheduler │    │ Ranking Service │     │ Email / Resume /   │
-│ Validator │    │ Vectorizer      │     │ Cover Letter /     │
-│ Rate Limiter│  │ Personalisation │     │ Interview Prep     │
-│ Enrichment│   │ Feedback Analyzer│    │ Company Research   │
-└───────────┘    └─────────────────┘     └───────────────────┘
-                          │
-                 ┌────────▼────────┐
-                 │   PostgreSQL 16 │
-                 │   (Docker)      │
-                 └─────────────────┘
-```
-
----
-
-## 🧩 Module Breakdown
-
-### Module 1 — Data Ingestion (Scrapers)
-
-| Component | File | Description |
-|---|---|---|
-| Base Scraper | `scrapers/base_scraper.py` | Abstract base class with retry logic, rate limiting, and data validation |
-| Reddit Scraper | `scrapers/multi_reddit_scraper.py` | OAuth-based scraper for multiple subreddits (r/forhire, r/IndiaJobs, etc.) |
-| HackerNews | `scrapers/hackernews_scraper.py` | "Who is Hiring" thread parser |
-| Remotive | `scrapers/remotive_scraper.py` | Remote job API integration |
-| JSearch | `scrapers/jsearch_scraper.py` | Google Jobs aggregator via RapidAPI |
-| Arbeitnow | `scrapers/arbeitnow_scraper.py` | EU/international startup jobs |
-| Adzuna | `scrapers/adzuna_scraper.py` | India-focused job API (200 calls/day) |
-| The Muse | `scrapers/themuse_scraper.py` | Remote-first professional jobs |
-| Wellfound | `scrapers/wellfound_scraper.py` | Startup ecosystem jobs |
-| Unstop | `scrapers/unstop_scraper.py` | India freshers & internships |
-| Orchestrator | `scrapers/run_all_scrapers.py` | Pipeline runner with metrics, deduplication, and scheduled mode |
-| Data Validator | `scrapers/data_validator.py` | Schema validation and data sanitisation |
-| Job Filter | `scrapers/job_filter.py` | Language detection and location gating |
-| Rate Limiter | `scrapers/rate_limiter.py` | Token-bucket rate limiting with 429 backoff |
-
-### Module 2 — Machine Learning Engine
-
-| Component | File | Description |
-|---|---|---|
-| Skill Matcher | `ml_engine/skill_matcher.py` | Semantic skill matching using `all-MiniLM-L6-v2` Sentence Transformer embeddings |
-| TF-IDF Vectorizer | `ml_engine/vectorizer.py` | Job description vectorisation with cached fitted models |
-| Ranking Service | `ml_engine/ranking_service.py` | Multi-signal weighted ranking (skill overlap + semantic similarity + preference + recency + taste) |
-| ML Enrichment | `ml_engine/ml_enrichment.py` | Local NLP pipeline: skill extraction (250+ taxonomy), experience classification, role classification, extractive summarisation |
-| Personalisation | `ml_engine/personalization.py` | User taste vector computation from saved job embeddings |
-| Feedback Analyzer | `ml_engine/feedback_analyzer.py` | Skip-penalty computation from swipe event history |
-| Embedding Store | `ml_engine/embedding_store.py` | Serialisation/deserialisation of numpy embedding vectors |
-
-### Module 3 — AI Engine (LLM Integration)
-
-| Feature | Method | Description |
-|---|---|---|
-| Cold Email Generation | `generate_cold_email()` | Context-aware outreach email with subject line |
-| Resume Analysis | `analyze_resume()` | Strengths, improvements, keyword gaps, match score |
-| Job-Tailored Suggestions | `generate_job_tailored_suggestions()` | 5–7 actionable resume edits for a specific job |
-| Resume Tailoring | `tailor_resume()` | Full resume rewrite with ATS score before/after |
-| Cover Letter | `generate_cover_letter()` | Professional cover letter generation |
-| Interview Prep | `generate_interview_prep()` | 8 Q&A pairs (technical, behavioural, company-specific) |
-| Company Research | `research_company()` | Overview, culture, tech stack, interview format, tips |
-| AI Chat | `chat()` | Conversational career assistant with user context |
-
-**Models Used:** Llama 3.1 8B Instant (fast), Llama 3.3 70B Versatile (smart), Gemma 2 9B IT (balanced)
-
-### Module 4 — Backend API (Django REST Framework)
-
-| Endpoint Group | Key Endpoints | Description |
-|---|---|---|
-| **Authentication** | `/auth/register/`, `/auth/login/`, `/auth/verify-email/`, `/auth/password-reset/` | JWT-based auth with email verification and password reset |
-| **Profile** | `/profile/`, `/users/me/skill-suggestions/`, `/users/me/taste-profile/` | User profile CRUD, ML-powered skill suggestions, taste vector summary |
-| **Jobs** | `/jobs/`, `/jobs/{id}/recommended/`, `/jobs/{id}/match_score/`, `/jobs/{id}/skill_gap/`, `/jobs/{id}/similar/`, `/jobs/{id}/skip/` | Job listing with ML-ranked recommendations, skill gap analysis, similar jobs |
-| **Saved Jobs** | `/saved-jobs/`, `/saved-jobs/{id}/generate-email/`, `/saved-jobs/analytics/` | Application tracking with pipeline analytics |
-| **AI** | `/ai/generate-email/`, `/ai/analyze-resume/`, `/ai/cover-letter/`, `/ai/interview-prep/`, `/ai/tailor-resume/`, `/ai/company-research/`, `/ai/chat/` | Full AI feature suite |
-| **Resume Versions** | `/resume-versions/` | Multiple named resume versions per user |
-
-### Module 5 — Frontend (React SPA)
-
-| Page / Component | File | Description |
-|---|---|---|
-| Landing Page | `LandingPage.jsx` | Marketing page with animated sections, feature cards, stats |
-| Discover (Swipe) | `DiscoverPage.jsx` | Tinder-style card swiping with match scores |
-| Resume Analyzer | `ResumeAnalyzerPage.jsx` | Upload, parse, analyse, and tailor resumes |
-| Kanban Tracker | `KanbanPage.jsx` | Drag-and-drop application pipeline board |
-| Analytics | `AnalyticsPage.jsx` | Pipeline funnel, response rates, skill trends |
-| Profile | `ProfilePage.jsx` | Multi-section profile editor with skills, education, resume |
-| Signup Wizard | `SignupWizard.jsx` | Multi-step onboarding with profile completion |
-| AI Chat Widget | `AIChatWidget.jsx` | Floating conversational AI assistant |
-| Swipe Card | `SwipeCard.jsx` | Animated swipe interaction component |
-| Job Detail Sheet | `JobDetailSheet.jsx` | Bottom sheet with full job details and actions |
-| Interview Prep Modal | `InterviewPrepModal.jsx` | AI-generated Q&A practice interface |
-| Apply Modal | `ApplyModal.jsx` | AI email/cover letter generation for applications |
-
----
-
-## 🛠️ Technology Stack
-
-### Backend
-| Technology | Purpose |
-|---|---|
-| Python 3.10+ | Core programming language |
-| Django 5.x | Web framework |
-| Django REST Framework | RESTful API layer |
-| SimpleJWT | JSON Web Token authentication |
-| PostgreSQL 16 | Primary database |
-| Celery + Redis | Asynchronous task queue |
-| APScheduler | Scheduled scraping jobs |
-
-### Frontend
-| Technology | Purpose |
-|---|---|
-| React 19 | UI library |
-| Vite 7 | Build tool and dev server |
-| React Router 7 | Client-side routing |
-| Zustand 5 | Lightweight state management |
-| TanStack React Query 5 | Server state and caching |
-| Framer Motion 12 | Animations and gestures |
-| Tailwind CSS 4 | Utility-first styling |
-| Lucide React | Icon library |
-| Axios | HTTP client |
-
-### AI / ML
-| Technology | Purpose |
-|---|---|
-| Groq API (Llama 3) | LLM inference for generative AI features |
-| Sentence Transformers (`all-MiniLM-L6-v2`) | Semantic embedding generation |
-| scikit-learn | TF-IDF vectorisation, cosine similarity |
-| NumPy | Numerical operations and embedding arithmetic |
-| PyPDF2 / python-docx | Resume file parsing (PDF/DOCX) |
-
-### DevOps
-| Technology | Purpose |
-|---|---|
-| Docker Compose | PostgreSQL containerisation |
-| WhiteNoise | Static file serving |
-| pytest + pytest-django | Automated testing |
-
----
-
-## 📊 Data Models (ER Overview)
-
-```
-User (Django Auth)
- └──1:1── UserProfile
-              ├── bio, experience_level, education (JSON), resume_text, resume_file
-              ├── preferred_job_types (JSON), preferred_locations (JSON)
-              ├── liked_embedding (binary — taste vector)
-              ├──1:N── UserSkill ──N:1── Skill (name, category, embedding)
-              ├──1:N── SavedJob ──N:1── Job
-              │            ├── status (saved → preparing → applied → interviewing → accepted/rejected)
-              │            ├── email_draft, cover_letter, match_score
-              │            └── interview_date, follow_up_date
-              ├──1:N── ResumeVersion (name, content, target_role)
-              └──1:N── SwipeEvent (action: skip/save/apply, card_position)
-
-Job
- ├── title, company, location, description, job_type, apply_link, source
- ├── ai_summary, experience_level, role_type, ai_skills (JSON)
- ├── embedding (binary), is_enriched
- └──N:M── Skill (required_skills)
-
-EmailVerificationToken ──1:1── User
-PasswordResetToken     ──1:1── User
+React SPA (Vite / Zustand / Framer Motion)
+           |  HTTP/JSON + JWT Bearer
+Django REST Framework API
+  JWT Auth | Rate Throttling | DjangoFilter | Pagination
+     |              |               |
+ PostgreSQL      ML Engine      Groq AI Engine
+                 Ranking         LLaMA 3.1 8B (fast)
+                 Embeddings      LLaMA 3.3 70B (smart)
+                 Taste Vector
+           |
+Celery Workers (Redis broker)
+  send_verification_email | send_password_reset_email
+           |
+Job Scraping Engine (APScheduler)
+  Internshala | Arbeitnow | JSearch | Remotive
+  HackerNews  | Reddit x2 | Adzuna
 ```
 
 ---
 
-## ⚙️ Installation & Setup
+## Getting Started
 
 ### Prerequisites
 
-- **Python** 3.10 or higher
-- **Node.js** 18 or higher
-- **Docker** (for PostgreSQL)
-- **Git**
+- Python 3.11+
+- Node.js 18+
+- Docker + Docker Compose
+- A free [Groq API key](https://console.groq.com)
 
-### Step 1 — Clone the Repository
+### 1. Install dependencies
 
 ```bash
-git clone https://github.com/ParthhMahajann/Nextstep_AI.git
+git clone <repo-url>
 cd Nextstep_AI
-```
 
-### Step 2 — Start PostgreSQL via Docker
-
-```bash
-docker compose up -d
-```
-
-### Step 3 — Backend Setup
-
-```bash
-# Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # macOS/Linux
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
 
-# Install dependencies
 pip install -r requirements.txt
-
-# Configure environment
-cd nextstep
-copy .env.example .env         # Windows
-# cp .env.example .env          # macOS/Linux
-
-# Edit .env and set:
-#   DJANGO_SECRET_KEY=<generate one>
-#   GROQ_API_KEY=<get free key at https://console.groq.com>
-
-# Run migrations
-python manage.py migrate
-
-# Create superuser (optional)
-python manage.py createsuperuser
-
-# Start development server
-python manage.py runserver
 ```
 
-### Step 4 — Frontend Setup
+### 2. Start PostgreSQL and Redis
+
+```bash
+docker-compose up -d
+```
+
+### 3. Configure environment
+
+```bash
+cp nextstep/.env.example nextstep/.env
+# Edit nextstep/.env -- see Environment Variables section
+```
+
+### 4. Migrate and run backend
+
+```bash
+cd nextstep
+python manage.py migrate
+python manage.py runserver      # http://localhost:8000
+```
+
+### 5. Start the frontend
 
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev     # http://localhost:3000 (proxies /api to :8000)
 ```
 
-The frontend will be available at `http://localhost:5173` and the API at `http://localhost:8000`.
+### 6. Start Celery (for real email delivery)
 
-### Step 5 — Run Job Scrapers (Optional)
+```bash
+# From the nextstep/ directory:
+celery -A nextstep worker --pool=solo --loglevel=info    # Windows
+# celery -A nextstep worker --loglevel=info              # Linux/macOS
+```
+
+> **Windows note:** Always use `--pool=solo`. The default prefork pool raises a `PermissionError` on Windows.
+
+### 7. Run scrapers (optional)
 
 ```bash
 cd scrapers
-python run_all_scrapers.py              # Full run
-python run_all_scrapers.py --quick      # Quick test
-python run_all_scrapers.py --enrich     # With ML enrichment
-python run_all_scrapers.py --scheduled  # Continuous mode
+python run_all_scrapers.py
 ```
 
 ---
 
-## 🧪 Testing
+## Environment Variables
+
+Create `nextstep/.env`:
+
+```
+# Django
+DJANGO_SECRET_KEY=your-50-char-secret-key
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Database
+DATABASE_URL=postgres://postgres:nextstep_dev_2026@localhost:5432/nextstep_ai
+
+# Redis
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+REDIS_CACHE_URL=redis://localhost:6379/1
+
+# AI
+GROQ_API_KEY=gsk_...
+
+# Email (optional -- console backend used if not set)
+EMAIL_HOST_USER=your@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
+
+# Frontend
+FRONTEND_URL=http://localhost:3000
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+
+# Scraper API keys (optional)
+RAPIDAPI_KEY=...        # JSearch scraper
+ADZUNA_APP_ID=...       # Adzuna scraper
+ADZUNA_APP_KEY=...
+```
+
+Generate a Django secret key:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+---
+
+## API Reference
+
+All endpoints require `Authorization: Bearer <access_token>` unless marked **No auth**.
+
+### Authentication
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | /api/auth/register/ | No | Register (triggers email verification) |
+| POST | /api/auth/login/ | No | Get JWT token pair |
+| POST | /api/auth/refresh/ | No | Refresh access token |
+| POST | /api/auth/logout/ | Yes | Blacklist refresh token |
+| GET | /api/auth/me/ | Yes | Current user |
+| POST | /api/auth/verify-email/ | No | Verify email with UUID token |
+| POST | /api/auth/resend-verification/ | No | Resend verification email |
+| POST | /api/auth/password-reset/ | No | Request password reset |
+| POST | /api/auth/password-reset/confirm/ | No | Confirm password reset |
+
+### Jobs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/jobs/ | Paginated list (filterable, searchable) |
+| GET | /api/jobs/{id}/ | Job detail |
+| GET | /api/jobs/recommended/ | ML-personalised feed (up to 50) |
+| GET | /api/jobs/{id}/match_score/ | Match score + explanation |
+| GET | /api/jobs/{id}/skill_gap/ | Matched vs missing skills |
+| POST | /api/jobs/{id}/skip/ | Record skip for ML feedback |
+| GET | /api/jobs/{id}/similar/ | Up to 8 embedding-similar jobs |
+
+Filters: `job_type`, `source`, `location`. Search: `title`, `company`, `description`.
+
+### Saved Jobs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/saved-jobs/ | List saved jobs |
+| POST | /api/saved-jobs/ | Save a job (idempotent) |
+| PATCH | /api/saved-jobs/{id}/ | Update status, notes, interview date |
+| DELETE | /api/saved-jobs/{id}/ | Remove |
+| POST | /api/saved-jobs/{id}/generate_email/ | AI cold email for this job |
+| GET | /api/saved-jobs/analytics/ | Pipeline metrics |
+
+### AI Endpoints (30 req/hour per user)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/ai/generate-email/ | Cold outreach email |
+| POST | /api/ai/analyze-resume/ | Resume analysis + ATS score |
+| POST | /api/ai/cover-letter/ | Cover letter |
+| POST | /api/ai/application-tips/ | 5 application tips |
+| POST | /api/ai/interview-prep/ | 8 interview Q&A pairs |
+| POST | /api/ai/tailor-resume/ | ATS-optimised resume rewrite |
+| POST | /api/ai/company-research/ | Company intelligence report |
+| POST | /api/ai/chat/ | Conversational career assistant |
+
+### Profile and Skills
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/PATCH | /api/profile/ | Get or update profile |
+| CRUD | /api/user-skills/ | Manage skills with proficiency ratings |
+| CRUD | /api/resume-versions/ | Named resume versions |
+| GET | /api/users/me/skill-suggestions/ | Skills in saved jobs not in profile |
+| GET | /api/users/me/taste-profile/ | Inferred role and skill preferences |
+| GET | /api/health/ | Health check (no auth) |
+
+---
+
+## ML Ranking Engine
+
+`ml_engine/ranking_service.py`
+
+**Without taste vector (new user):**
+
+```
+score = 0.40 x skill_overlap
+      + 0.30 x semantic_similarity    (sentence-transformers cosine)
+      + 0.20 x preference_match       (job type + location)
+      + 0.10 x recency_score          (1 / (1 + days_old / 7))
+```
+
+**With taste vector (returning user):**
+
+```
+score = 0.30 x skill_overlap
+      + 0.20 x semantic_similarity
+      + 0.15 x preference_match
+      + 0.10 x recency_score
+      + 0.25 x taste_score            (cosine(mean_saved_embeddings, job_embedding))
+```
+
+The taste vector is recomputed automatically on every SavedJob status change via a Django post_save signal.
+
+Precompute embeddings:
 
 ```bash
 cd nextstep
-pytest                          # Run all tests
-pytest core/tests/test_models.py       # Model tests
-pytest core/tests/test_views.py        # API view tests
-pytest core/tests/test_auth.py         # Authentication tests
-pytest core/tests/test_ai_views.py     # AI endpoint tests
-pytest core/tests/test_scrapers.py     # Scraper tests
-pytest core/tests/test_serializers.py  # Serializer tests
+python manage.py precompute_embeddings
+python manage.py precompute_embeddings --limit 500
 ```
-
-**Test Coverage:**
-- Model creation, relationships, and signal handlers
-- JWT authentication flow (register → verify email → login → logout)
-- Password reset flow
-- API endpoints (CRUD for jobs, saved jobs, resume versions)
-- AI view request/response validation
-- Scraper data validation and deduplication
 
 ---
 
-## 🔑 Key Algorithms
+## AI Engine
 
-### 1. Multi-Signal Ranking Formula
+`ai_engine/groq_service.py` -- GroqAIService is fully decoupled from Django.
 
+```python
+from ai_engine.groq_service import get_ai_service
+
+ai = get_ai_service()
+
+# Resume analysis
+result = ai.analyze_resume(
+    resume_text="...",
+    job_description="...",
+    job_title="Software Engineer",
+)
+print(result.match_score)        # e.g. 0.78
+print(result.keywords_missing)  # e.g. ['Kubernetes', 'Go']
+
+# Cold email generation
+email = ai.generate_cold_email(
+    job_title="Backend Engineer",
+    company="Acme Corp",
+    job_description="...",
+    user_name="Parth Mahajan",
+    user_skills=["Python", "Django", "PostgreSQL"],
+)
+print(email.subject)
+print(email.body)
 ```
-score = w₁ × skill_overlap + w₂ × semantic_similarity + w₃ × preference_match + w₄ × recency_score + w₅ × taste_score
-```
-
-| Weight | Default | With Taste Vector |
-|---|---|---|
-| Skill Match (w₁) | 0.40 | 0.30 |
-| Semantic Similarity (w₂) | 0.30 | 0.20 |
-| Preference Match (w₃) | 0.20 | 0.15 |
-| Recency (w₄) | 0.10 | 0.10 |
-| Taste Vector (w₅) | — | 0.25 |
-
-### 2. Skill Extraction Pipeline
-
-- **Taxonomy:** 250+ curated skills across 12 categories (programming, frontend, backend, databases, cloud, ML, mobile, testing, tools, security, design, marketing)
-- **Multi-word greedy match** (longest-first) + **word-boundary regex** for single-word skills
-- **Variant normalisation** (e.g., `reactjs` → `react`, `k8s` → `kubernetes`)
-
-### 3. Experience Level Classification
-
-Weighted pattern matching with title signals weighted 3× higher than description signals. Categories: Entry, Mid, Senior, Any.
-
-### 4. User Taste Vector
-
-Mean embedding of all positively-interacted jobs (saved/applied/interviewing/accepted), computed on-the-fly and cached in the user profile.
-
-### 5. Skip Penalty Feedback Loop
-
-Analyses swipe-skip history to identify disliked role types and experience levels, then applies multiplicative penalties to future ranking scores.
 
 ---
 
-## 📁 Project Structure
+## Job Scrapers
+
+| Class | Source | Method |
+|-------|--------|--------|
+| IntershalaScraper | Internshala | HTML (BeautifulSoup) |
+| ArbeitnowScraper | Arbeitnow.com | JSON API (public) |
+| JSearchScraper | JSearch / RapidAPI | REST API (RAPIDAPI_KEY required) |
+| RemotiveScraper | Remotive.com | JSON API (public) |
+| HackerNewsScraper | HN Who is Hiring | Algolia API |
+| MultiRedditScraper | r/forhire, r/cscareerquestions | Reddit JSON (no auth) |
+| RedditForHireJsonScraper | r/forhire | Reddit JSON (high volume) |
+| AdzunaScraper | Adzuna India | REST API (ADZUNA_APP_ID + KEY required) |
+
+```bash
+# Run all scrapers
+cd scrapers && python run_all_scrapers.py
+
+# Check scraper status
+cd nextstep && python manage.py scraper_status
+```
+
+---
+
+## Project Structure
 
 ```
 Nextstep_AI/
-├── ai_engine/                    # LLM integration layer
-│   ├── groq_service.py           #   Groq API service (email, resume, interview, chat)
-│   └── job_enrichment.py         #   AI-powered job enrichment
-├── ml_engine/                    # Machine learning pipeline
-│   ├── skill_matcher.py          #   Sentence Transformer skill matching
-│   ├── vectorizer.py             #   TF-IDF vectoriser with caching
-│   ├── ranking_service.py        #   Multi-signal job ranking
-│   ├── ml_enrichment.py          #   Local NLP enrichment (no API)
-│   ├── personalization.py        #   User taste vector computation
-│   ├── feedback_analyzer.py      #   Skip-penalty calculator
-│   └── embedding_store.py        #   Embedding serialisation utils
-├── scrapers/                     # Data ingestion pipeline
-│   ├── base_scraper.py           #   Abstract base with retry + rate limiting
-│   ├── run_all_scrapers.py       #   Orchestrator with metrics + scheduling
-│   ├── data_validator.py         #   Schema validation + sanitisation
-│   ├── job_filter.py             #   Language + location filters
-│   ├── rate_limiter.py           #   Token-bucket rate limiter
-│   ├── retry_decorator.py        #   Exponential backoff retry
-│   ├── scheduler.py              #   APScheduler integration
-│   └── *_scraper.py              #   9 source-specific scrapers
-├── nextstep/                     # Django project root
-│   ├── core/                     #   Main Django app
-│   │   ├── models.py             #     Data models (10 models)
-│   │   ├── views.py              #     API views (15+ endpoints)
-│   │   ├── ai_views.py           #     AI-specific API views
-│   │   ├── serializers.py        #     DRF serialisers
-│   │   ├── ai_serializers.py     #     AI endpoint serialisers
-│   │   ├── matching.py           #     ML ↔ Django bridge service
-│   │   ├── urls.py               #     URL routing
-│   │   ├── admin.py              #     Django admin configuration
-│   │   ├── file_utils.py         #     Resume PDF/DOCX parsing
-│   │   └── tests/                #     Automated test suite (7 test files)
-│   └── nextstep/                 #   Django settings
-│       ├── settings.py           #     Project configuration
-│       ├── celery.py             #     Celery async task config
-│       └── urls.py               #     Root URL configuration
-├── frontend/                     # React SPA
+├── nextstep/                        # Django project root
+│   ├── nextstep/
+│   │   ├── settings.py              # All config (env-driven, fail-safe defaults)
+│   │   ├── urls.py                  # Root router + SPA fallback
+│   │   ├── celery.py
+│   │   └── wsgi.py
+│   └── core/
+│       ├── models.py                # UserProfile, Job, SavedJob, SwipeEvent ...
+│       ├── views.py                 # Auth, Profile, Job, SavedJob, ML views
+│       ├── ai_views.py              # 8 AI endpoint views
+│       ├── serializers.py
+│       ├── ai_serializers.py
+│       ├── urls.py
+│       ├── tasks.py                 # Celery email tasks (3 auto-retries)
+│       ├── matching.py              # ML service adapter
+│       ├── file_utils.py            # PDF/DOCX resume parser
+│       ├── migrations/              # 9 schema migrations
+│       ├── management/commands/
+│       │   ├── precompute_embeddings.py
+│       │   └── scraper_status.py
+│       └── tests/                   # Full pytest suite
+├── ai_engine/
+│   ├── groq_service.py              # GroqAIService -- 8 career AI features
+│   └── job_enrichment.py
+├── ml_engine/
+│   ├── ranking_service.py           # Multi-signal job ranker
+│   ├── skill_matcher.py
+│   ├── vectorizer.py
+│   ├── embedding_store.py
+│   ├── personalization.py
+│   ├── feedback_analyzer.py
+│   └── ml_enrichment.py
+├── scrapers/
+│   ├── base_scraper.py
+│   ├── internshala_scraper.py
+│   ├── arbeitnow_scraper.py
+│   ├── jsearch_scraper.py
+│   ├── remotive_scraper.py
+│   ├── hackernews_scraper.py
+│   ├── multi_reddit_scraper.py
+│   ├── reddit_forhire_json_scraper.py
+│   ├── adzuna_scraper.py
+│   ├── data_validator.py
+│   ├── job_filter.py
+│   ├── enrich_jobs.py
+│   ├── rate_limiter.py
+│   ├── retry_decorator.py
+│   ├── run_all_scrapers.py
+│   └── scheduler.py
+├── frontend/
 │   ├── src/
-│   │   ├── pages/                #     14 page components
-│   │   ├── components/           #     12 reusable components
-│   │   ├── store/                #     Zustand stores (auth, jobs)
-│   │   ├── api/                  #     Axios API client
-│   │   ├── hooks/                #     Custom React hooks
-│   │   ├── App.jsx               #     Root component with routing
-│   │   └── index.css             #     Global styles
+│   │   ├── pages/                   # DiscoverPage, KanbanPage, AnalyticsPage ...
+│   │   ├── components/              # SwipeCard, JobDetailSheet, AIChatWidget ...
+│   │   ├── store/                   # authStore.js, jobsStore.js (Zustand)
+│   │   ├── api/client.js            # Axios + JWT refresh interceptors
+│   │   └── hooks/useIsMobile.js
 │   ├── package.json
 │   └── vite.config.js
-├── docker-compose.yml            # PostgreSQL container
-├── requirements.txt              # Python dependencies
-└── README.md                     # This file
+├── docker-compose.yml               # PostgreSQL 16 + Redis 7
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-## 🚀 Features Summary
+## Running Tests
 
-| # | Feature | AI/ML | Description |
-|---|---|---|---|
-| 1 | Multi-source Job Aggregation | — | 9 scrapers with rate limiting, retry, validation |
-| 2 | Swipe-to-Discover Interface | ✅ | Tinder-style cards with ML match scores |
-| 3 | Semantic Skill Matching | ✅ | Sentence Transformer embeddings + cosine similarity |
-| 4 | TF-IDF Job Vectorisation | ✅ | Cached vectoriser for text similarity |
-| 5 | Multi-Signal Ranking | ✅ | 5-factor weighted scoring formula |
-| 6 | Resume Analysis | ✅ | AI-powered strengths, gaps, keyword analysis |
-| 7 | Resume Tailoring | ✅ | Job-specific rewrite with ATS score comparison |
-| 8 | Cover Letter Generation | ✅ | Context-aware professional cover letters |
-| 9 | Cold Email Drafting | ✅ | Outreach email with subject line |
-| 10 | Interview Preparation | ✅ | 8 Q&A pairs per job (technical + behavioural) |
-| 11 | Company Research | ✅ | Culture, tech stack, interview format insights |
-| 12 | AI Chat Assistant | ✅ | Floating conversational career coach |
-| 13 | Kanban Application Tracker | — | Drag-and-drop pipeline (6 statuses) |
-| 14 | Analytics Dashboard | — | Response rates, offer rates, skill trends |
-| 15 | Personalised Taste Vector | ✅ | Learned from saved/applied job embeddings |
-| 16 | Skip Feedback Loop | ✅ | Negative signal penalties on rankings |
-| 17 | Skill Gap Analysis | ✅ | Per-job user vs. required skill comparison |
-| 18 | Similar Jobs | ✅ | Embedding-based nearest-neighbour recommendations |
-| 19 | Skill Suggestions | ✅ | Trending skills from saved job pipeline |
-| 20 | ML Job Enrichment | ✅ | Auto skill extraction, role/experience classification, summarisation |
-| 21 | Email Verification | — | Token-based email verification flow |
-| 22 | Password Reset | — | Secure token-based password reset |
-| 23 | Resume File Parsing | — | PDF and DOCX text extraction |
-| 24 | Multiple Resume Versions | — | Named resumes for different target roles |
+```bash
+cd nextstep
+pytest                           # all tests
+pytest core/tests/test_auth.py  # single file
+pytest -v --tb=short             # verbose
+pytest --cov=core                # with coverage
+```
+
+| File | Coverage area |
+|------|--------------|
+| test_auth.py | Registration, verification, login, logout, password reset |
+| test_models.py | Model fields, constraints, signals, token expiry |
+| test_views.py | Job listing, filters, saved job CRUD, analytics |
+| test_ai_views.py | AI endpoint validation, throttle behaviour |
+| test_serializers.py | Field validation, username rules, edge cases |
+| test_scrapers.py | Parser correctness, deduplication |
+| test_celery.py | Task dispatch, retry behaviour |
 
 ---
 
-## 🔮 Future Scope
+## Production Deployment
 
-1. **Collaborative Filtering** — Recommend jobs based on similar users' interactions.
-2. **Real-time Notifications** — WebSocket-based alerts for new matching jobs.
-3. **Mobile Application** — React Native port for iOS/Android.
-4. **Advanced Analytics** — Time-series analysis of application success rates.
-5. **Resume Builder** — AI-assisted resume creation from scratch.
-6. **Recruiter Portal** — Dual-sided marketplace for employers.
+```bash
+# 1. Build frontend
+cd frontend && npm run build
+
+# 2. Collect static files
+cd nextstep && python manage.py collectstatic --noinput
+
+# 3. Start infrastructure
+docker-compose up -d
+
+# 4. Run with Gunicorn
+gunicorn nextstep.wsgi:application \
+  --bind 0.0.0.0:8000 \
+  --workers 4 \
+  --timeout 120
+```
+
+**Production checklist:**
+- `DJANGO_DEBUG=False`
+- Strong `DJANGO_SECRET_KEY` (50+ characters)
+- HTTPS with valid TLS certificate (HSTS enforced automatically when DEBUG=False)
+- `DATABASE_URL` pointing to a managed PostgreSQL instance
+- Celery workers running (`--pool=solo` on Windows)
+- `EMAIL_HOST_USER` + `EMAIL_HOST_PASSWORD` configured
+- `GROQ_API_KEY` set for AI features
+
+**Rate limits:**
+
+| Scope | Limit |
+|-------|-------|
+| Anonymous | 100 req/hour |
+| Authenticated | 1000 req/hour |
+| Auth endpoints (register, reset) | 10 req/hour |
+| AI endpoints | 30 req/hour |
 
 ---
 
-## 📚 References
+## Author
 
-1. Reimers, N. & Gurevych, I. (2019). *Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks.* EMNLP.
-2. Django Software Foundation. *Django Documentation.* https://docs.djangoproject.com/
-3. Meta AI. *Llama 3 Model Card.* https://ai.meta.com/llama/
-4. Groq Inc. *Groq API Documentation.* https://console.groq.com/docs
-5. scikit-learn developers. *TF-IDF Vectorizer.* https://scikit-learn.org/
-
----
-
-## 👤 Author
-
-**Parth Mahajan**
-
-- GitHub: [@ParthhMahajann](https://github.com/ParthhMahajann)
-
-**Project Guide:** Mr. Neeraj Sharma
-
----
-
-<p align="center">
-  <strong>NextStep AI</strong> — Built to get you hired faster. ⚡
-</p>
+**Parth Mahajan** | Roll No: 2023BTCSE012 | JLU ID: jlu08052
+B.Tech CSE, Jagran Lakecity University, Bhopal
+Guide: Mr. Neeraj Sharma, Department of CSE, JLU Bhopal

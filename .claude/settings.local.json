@@ -61,7 +61,25 @@
       "Bash(grep -i \"worktree.*director\" CLAUDE.md)",
       "Bash(git push *)",
       "Bash(git *)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(grep -E \"\\\\.env$|\\\\.env\\\\.\")",
+      "Bash(mkdir -p D:/Nextstep_AI/presentation)",
+      "Bash(node -e \"require\\('pptxgenjs'\\); console.log\\('pptxgenjs OK'\\)\")",
+      "Bash(node -e \"require\\('react-icons/fa'\\); console.log\\('react-icons OK'\\)\")",
+      "Bash(node -e \"require\\('sharp'\\); console.log\\('sharp OK'\\)\")",
+      "Bash(node -e \"require\\('react'\\); console.log\\('react OK'\\)\")",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('pptxgenjs'\\); require\\('react-icons/fa'\\); require\\('sharp'\\); require\\('react'\\); require\\('react-dom/server'\\); console.log\\('All packages OK'\\)\")",
+      "Bash(node generate_presentation.js)",
+      "Bash(where soffice *)",
+      "Bash(where libreoffice *)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "mcp__Claude_in_Chrome__list_connected_browsers",
+      "mcp__Claude_in_Chrome__switch_browser",
+      "mcp__Claude_in_Chrome__select_browser",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__computer"
     ]
   }
 }
